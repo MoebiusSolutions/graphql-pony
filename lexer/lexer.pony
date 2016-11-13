@@ -52,18 +52,18 @@ class GraphQLLexer
 
   fun ref nextToken() : (GraphQLToken|None) =>
     try
-      let rune = _runes.next()
-      match rune
-      | 32 =>
-        let res = GraphQLToken(_collect.clone())
-        _collect = String()
-        res
-      else
-        _collect.push_utf32(rune)
-        GraphQLToken(_collect.clone())
+      while _runes.has_next() do
+        let rune = _runes.next()
+        match rune
+        | 32 =>
+          let res = GraphQLToken(_collect.clone())
+          _collect = String()
+          break res
+        else
+          _collect.push_utf32(rune)
+          GraphQLToken(_collect.clone())
+        end
       end
-    else
-      None
     end
 
   fun ref values() : GraphQLTokens => GraphQLTokens(this)
