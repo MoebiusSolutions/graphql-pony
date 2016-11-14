@@ -1,4 +1,4 @@
-actor Main
+actor Main2
   new create(env: Env) =>
     env.out.print("lexer")
     let lexer = GraphQLLexer(env,
