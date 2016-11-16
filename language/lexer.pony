@@ -1,7 +1,3 @@
-
-
-
-
 class Tokens is Iterator[Token val]
   let _lexer : GraphQLLexer ref
   var _next : (Token|None)
@@ -32,11 +28,34 @@ class GraphQLLexer
   var _collect : String ref = String()
   var _line : U32 = 1
   var _nextRune : (U32|None) = None
+  var _token: Token = Token(SOF, "", 0)
+  var _lastToken: Token = Token(SOF, "", 0)
 
   new create(env' : Env, input : String) =>
     env = env'
     _input = input
     _runes = input.runes()
+
+  fun ref token(): Token =>
+    _token
+
+  fun ref lastToken(): Token =>
+    _lastToken
+
+  fun ref advance() =>
+    var token' = _token
+    _lastToken = _token
+
+    if (token'.kind is EOF) == false then
+      repeat
+        token' = match next_token()
+        | let t: Token => t
+        else Token(EOF, "", 0) end
+// //        token = token.next = readToken(this, token);
+      until (token'.kind is COMMENT) == false end
+      _token = token'
+    end
+    token'
 
   fun ref has_next_rune() : Bool =>
     match _nextRune

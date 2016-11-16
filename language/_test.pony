@@ -10,11 +10,33 @@ actor Main is TestList
   fun tag tests(test: PonyTest) =>
     test(_TestAdd)
     test(_TestSub)
+    test(_TestLexerAdvance)
     test(_TestLexer)
+
+class iso _TestLexerAdvance is UnitTest
+  fun name(): String => "lexer advance"
+  fun apply(h: TestHelper) =>
+    let env = h.env
+    let lexer = GraphQLLexer(h.env, """
+      query{
+         name,
+         age
+      }
+      """)
+    while (lexer.token().kind is EOF) == false do
+      printToken(env, lexer.token())
+      lexer.advance()
+    end
+    printToken(env, lexer.token())
+
+  fun printToken(env: Env, token: Token) =>
+    env.out.print("token: "
+      + token.kind.string() + " "
+      + token.value + " "
+      + token.line.string())
 
 class iso _TestLexer is UnitTest
   fun name():String => "lexer"
-
   fun apply(h: TestHelper) =>
     h.assert_eq[String]("123", "123")
     let lexer = GraphQLLexer(h.env,
