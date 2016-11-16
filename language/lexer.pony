@@ -1,22 +1,10 @@
 
 
 
-class val GraphQLToken
-  """
-  Immutable token lexed from input
-  """
-  let kind : TokenKind val
-  let value : String val
-  let line : U32 val
 
-  new val create(kind': TokenKind, value': String, line': U32) =>
-    kind = kind'
-    value = value'
-    line = line'
-
-class GraphQLTokens is Iterator[GraphQLToken val]
+class Tokens is Iterator[Token val]
   let _lexer : GraphQLLexer ref
-  var _next : (GraphQLToken|None)
+  var _next : (Token|None)
 
   new create(lexer : GraphQLLexer ref) =>
     _lexer = lexer
@@ -29,9 +17,9 @@ class GraphQLTokens is Iterator[GraphQLToken val]
       true
     end
 
-  fun ref next() : GraphQLToken val ? =>
+  fun ref next() : Token val ? =>
     match _next = _lexer.next_token()
-    | let t : GraphQLToken =>
+    | let t : Token =>
       t
     else
       error
@@ -81,7 +69,7 @@ class GraphQLLexer
     end
     rune
 
-  fun ref _read_name(rune : U32) : GraphQLToken ? =>
+  fun ref _read_name(rune : U32) : Token ? =>
     """
     Reads an alphanumeric + underscore name from the source.
 
@@ -102,9 +90,9 @@ class GraphQLLexer
         break
       end
     end
-    GraphQLToken(NAME, name.clone(), _line)
+    Token(NAME, name.clone(), _line)
 
-  fun ref _read_comment() : GraphQLToken ? =>
+  fun ref _read_comment() : Token ? =>
     """
     Read comment - from # until the end of the line
     """
@@ -117,9 +105,9 @@ class GraphQLLexer
         comment.push_utf32(r)
       end
     end
-    GraphQLToken(COMMENT, comment.clone(), _line)
+    Token(COMMENT, comment.clone(), _line)
 
-  fun ref _read_spread() : GraphQLToken ? =>
+  fun ref _read_spread() : Token ? =>
     let dot2 = next_rune()
     if dot2 != '.' then
       error
@@ -128,7 +116,7 @@ class GraphQLLexer
     if dot3 != '.' then
       error
     end
-    GraphQLToken(SPREAD, "...", _line)
+    Token(SPREAD, "...", _line)
 
   fun ref _read_digits(number : String ref) ? =>
     while has_next_rune() do
@@ -141,7 +129,7 @@ class GraphQLLexer
       end
     end
 
-  fun ref _read_number(rune : U32) : GraphQLToken ? =>
+  fun ref _read_number(rune : U32) : Token ? =>
     """
     Reads a number token from the source file, either a float
     or an int depending on whether a decimal point appears.
@@ -186,15 +174,15 @@ class GraphQLLexer
       end
     end
     if is_float then
-      GraphQLToken(GraphQLFloat, number.clone(), _line)
+      Token(GraphQLFloat, number.clone(), _line)
     else
-      GraphQLToken(GraphQLInt, number.clone(), _line)
+      Token(GraphQLInt, number.clone(), _line)
     end
 
   fun ref _make_unicode(d1 : U32, d2 : U32, d3 : U32, d4 : U32)  : U32 =>
     0
 
-  fun ref _read_string() : GraphQLToken ? =>
+  fun ref _read_string() : Token ? =>
     """
     Read a quoted string. Lexes common escape sequences.
     "([^"\\\u000A\u000D]|(\\(u[0-9a-fA-F]{4}|["\\/bfnrt])))*"
@@ -228,7 +216,7 @@ class GraphQLLexer
         string.push_utf32(r)
       end
     end
-    GraphQLToken(GraphQLString, string.clone(), _line)
+    Token(GraphQLString, string.clone(), _line)
 
   fun ref _skip_whitespace() =>
     try
@@ -248,7 +236,7 @@ class GraphQLLexer
       end
     end
 
-  fun ref next_token() : (GraphQLToken|None) =>
+  fun ref next_token() : (Token|None) =>
     """
     Gets the next token from the source starting at the current position.
 
@@ -260,20 +248,20 @@ class GraphQLLexer
       _skip_whitespace()
       let rune = next_rune()
       match rune
-      | BANG.rune() => GraphQLToken(BANG, "!", _line)
+      | BANG.rune() => Token(BANG, "!", _line)
       | '#' => _read_comment()
-      | DOLLAR.rune() => GraphQLToken(DOLLAR, "$", _line)
-      | ParenL.rune() => GraphQLToken(ParenL, "(", _line)
-      | ParenR.rune() => GraphQLToken(ParenR, ")", _line)
+      | DOLLAR.rune() => Token(DOLLAR, "$", _line)
+      | ParenL.rune() => Token(ParenL, "(", _line)
+      | ParenR.rune() => Token(ParenR, ")", _line)
       | '.' => _read_spread()
-      | COLON.rune() => GraphQLToken(COLON, ":", _line)
-      | EQUALS.rune() => GraphQLToken(EQUALS, "=", _line)
-      | AT.rune() => GraphQLToken(AT, "@", _line)
-      | BracketL.rune() => GraphQLToken(BracketL, "[", _line)
-      | BracketR.rune() => GraphQLToken(BracketR, "]", _line)
-      | BraceL.rune() => GraphQLToken(BraceL, "{", _line)
-      | PIPE.rune() => GraphQLToken(PIPE, "|", _line)
-      | BraceR.rune() => GraphQLToken(BraceR, "}", _line)
+      | COLON.rune() => Token(COLON, ":", _line)
+      | EQUALS.rune() => Token(EQUALS, "=", _line)
+      | AT.rune() => Token(AT, "@", _line)
+      | BracketL.rune() => Token(BracketL, "[", _line)
+      | BracketR.rune() => Token(BracketR, "]", _line)
+      | BraceL.rune() => Token(BraceL, "{", _line)
+      | PIPE.rune() => Token(PIPE, "|", _line)
+      | BraceR.rune() => Token(BraceR, "}", _line)
       | let c : U32 if ((c >= 'A') and (c <= 'Z'))
                     or ((c >= 'a') and (c <= 'z'))
                     or (c == '_')  =>
@@ -288,4 +276,4 @@ class GraphQLLexer
       end
     end
 
-  fun ref values() : GraphQLTokens => GraphQLTokens(this)
+  fun ref values() : Tokens => Tokens(this)

@@ -45,7 +45,18 @@ type TokenKind is (SOF | EOF | BANG | DOLLAR | ParenL | ParenR
   | BraceL | PIPE | BraceR | NAME | GraphQLInt | GraphQLFloat | GraphQLString
   | COMMENT )
 
-class Token
+class val Token
+  """
+  Immutable token lexed from input
+  """
+  let kind : TokenKind val
+  let value : String val
+  let line : U32 val
+
+  new val create(kind': TokenKind, value': String, line': U32) =>
+    kind = kind'
+    value = value'
+    line = line'
 
 class Location
   """
