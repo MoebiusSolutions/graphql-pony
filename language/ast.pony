@@ -1,3 +1,50 @@
+// Each kind of token.
+primitive SOF
+  fun string(): String => "SOF"
+primitive EOF
+  fun string(): String => "EOF"
+primitive BANG fun rune(): U32 => '!'
+  fun string(): String => "BANG"
+primitive DOLLAR fun rune(): U32 => '$'
+  fun string(): String => "DOLLAR"
+primitive ParenL fun rune(): U32 => '('
+  fun string(): String => "ParenL"
+primitive ParenR fun rune(): U32 => ')'
+  fun string(): String => "ParenR"
+primitive SPREAD fun rune(): U32 => '...'
+  fun string(): String => "SPREAD"
+primitive COLON fun rune(): U32 => ':'
+  fun string(): String => "COLON"
+primitive EQUALS fun rune(): U32 => '='
+  fun string(): String => "EQUALS"
+primitive AT fun rune(): U32 => '@'
+  fun string(): String => "AT"
+primitive BracketL fun rune(): U32 => '['
+  fun string(): String => "BracketL"
+primitive BracketR fun rune(): U32 => ']'
+  fun string(): String => "BracketR"
+primitive BraceL fun rune(): U32 => '{'
+  fun string(): String => "BraceL"
+primitive PIPE fun rune(): U32 => '|'
+  fun string(): String => "PIPE"
+primitive BraceR fun rune(): U32 => '}'
+  fun string(): String => "BraceR"
+primitive NAME
+  fun string(): String => "NAME"
+primitive GraphQLInt
+  fun string(): String => "GraphQLInt"
+primitive GraphQLFloat
+  fun string(): String => "GraphQLFloat"
+primitive GraphQLString
+  fun string(): String => "GraphQLString"
+primitive COMMENT
+  fun string(): String => "COMMENT"
+
+type TokenKind is (SOF | EOF | BANG | DOLLAR | ParenL | ParenR
+  | SPREAD | COLON | EQUALS | AT | BracketL | BracketR
+  | BraceL | PIPE | BraceR | NAME | GraphQLInt | GraphQLFloat | GraphQLString
+  | COMMENT )
+
 class Token
 
 class Location

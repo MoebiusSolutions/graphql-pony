@@ -1,91 +1,17 @@
-actor Main2
-  new create(env: Env) =>
-    env.out.print("lexer")
-    let lexer = GraphQLLexer(env,
-      """
-      this is
-      a test! with$ pleft( pright)
-      :=[]{|}
-      aName_with_123_numbers
-      { ...abc }
-      test # This is a comment
-      "Try a quoted string"
-      number: 0
-      number: 12
-      number: 12.1
-      number: 12.2e1
-      done
-      """
-    )
-    let tokens = lexer.values()
-    try
-      while tokens.has_next() do
-        let token = tokens.next()
-        env.out.print("token: "
-          + token.token.string() + " "
-          + token.name + " "
-          + token.line.string())
-      end
-    end
 
-// Each kind of token.
-primitive SOF
-  fun string(): String => "SOF"
-primitive EOF
-  fun string(): String => "EOF"
-primitive BANG fun rune(): U32 => '!'
-  fun string(): String => "BANG"
-primitive DOLLAR fun rune(): U32 => '$'
-  fun string(): String => "DOLLAR"
-primitive ParenL fun rune(): U32 => '('
-  fun string(): String => "ParenL"
-primitive ParenR fun rune(): U32 => ')'
-  fun string(): String => "ParenR"
-primitive SPREAD fun rune(): U32 => '...'
-  fun string(): String => "SPREAD"
-primitive COLON fun rune(): U32 => ':'
-  fun string(): String => "COLON"
-primitive EQUALS fun rune(): U32 => '='
-  fun string(): String => "EQUALS"
-primitive AT fun rune(): U32 => '@'
-  fun string(): String => "AT"
-primitive BracketL fun rune(): U32 => '['
-  fun string(): String => "BracketL"
-primitive BracketR fun rune(): U32 => ']'
-  fun string(): String => "BracketR"
-primitive BraceL fun rune(): U32 => '{'
-  fun string(): String => "BraceL"
-primitive PIPE fun rune(): U32 => '|'
-  fun string(): String => "PIPE"
-primitive BraceR fun rune(): U32 => '}'
-  fun string(): String => "BraceR"
-primitive NAME
-  fun string(): String => "NAME"
-primitive GraphQLInt
-  fun string(): String => "GraphQLInt"
-primitive GraphQLFloat
-  fun string(): String => "GraphQLFloat"
-primitive GraphQLString
-  fun string(): String => "GraphQLString"
-primitive COMMENT
-  fun string(): String => "COMMENT"
 
-type TokenType is (SOF | EOF | BANG | DOLLAR | ParenL | ParenR
-  | SPREAD | COLON | EQUALS | AT | BracketL | BracketR
-  | BraceL | PIPE | BraceR | NAME | GraphQLInt | GraphQLFloat | GraphQLString
-  | COMMENT )
 
 class val GraphQLToken
   """
   Immutable token lexed from input
   """
-  let name : String val
-  let token : TokenType val
+  let kind : TokenKind val
+  let value : String val
   let line : U32 val
 
-  new val create(name' : String, token' : TokenType, line' : U32) =>
-    name = name'
-    token = token'
+  new val create(kind': TokenKind, value': String, line': U32) =>
+    kind = kind'
+    value = value'
     line = line'
 
 class GraphQLTokens is Iterator[GraphQLToken val]
@@ -176,7 +102,7 @@ class GraphQLLexer
         break
       end
     end
-    GraphQLToken(name.clone(), NAME, _line)
+    GraphQLToken(NAME, name.clone(), _line)
 
   fun ref _read_comment() : GraphQLToken ? =>
     """
@@ -191,7 +117,7 @@ class GraphQLLexer
         comment.push_utf32(r)
       end
     end
-    GraphQLToken(comment.clone(), COMMENT, _line)
+    GraphQLToken(COMMENT, comment.clone(), _line)
 
   fun ref _read_spread() : GraphQLToken ? =>
     let dot2 = next_rune()
@@ -202,7 +128,7 @@ class GraphQLLexer
     if dot3 != '.' then
       error
     end
-    GraphQLToken("...", SPREAD, _line)
+    GraphQLToken(SPREAD, "...", _line)
 
   fun ref _read_digits(number : String ref) ? =>
     while has_next_rune() do
@@ -260,9 +186,9 @@ class GraphQLLexer
       end
     end
     if is_float then
-      GraphQLToken(number.clone(), GraphQLFloat, _line)
+      GraphQLToken(GraphQLFloat, number.clone(), _line)
     else
-      GraphQLToken(number.clone(), GraphQLInt, _line)
+      GraphQLToken(GraphQLInt, number.clone(), _line)
     end
 
   fun ref _make_unicode(d1 : U32, d2 : U32, d3 : U32, d4 : U32)  : U32 =>
@@ -302,7 +228,7 @@ class GraphQLLexer
         string.push_utf32(r)
       end
     end
-    GraphQLToken(string.clone(), GraphQLString, _line)
+    GraphQLToken(GraphQLString, string.clone(), _line)
 
   fun ref _skip_whitespace() =>
     try
@@ -334,20 +260,20 @@ class GraphQLLexer
       _skip_whitespace()
       let rune = next_rune()
       match rune
-      | BANG.rune() => GraphQLToken("!", BANG, _line)
+      | BANG.rune() => GraphQLToken(BANG, "!", _line)
       | '#' => _read_comment()
-      | DOLLAR.rune() => GraphQLToken("$", DOLLAR, _line)
-      | ParenL.rune() => GraphQLToken("(", ParenL, _line)
-      | ParenR.rune() => GraphQLToken(")", ParenR, _line)
+      | DOLLAR.rune() => GraphQLToken(DOLLAR, "$", _line)
+      | ParenL.rune() => GraphQLToken(ParenL, "(", _line)
+      | ParenR.rune() => GraphQLToken(ParenR, ")", _line)
       | '.' => _read_spread()
-      | COLON.rune() => GraphQLToken(":", COLON, _line)
-      | EQUALS.rune() => GraphQLToken("=", EQUALS, _line)
-      | AT.rune() => GraphQLToken("@", AT, _line)
-      | BracketL.rune() => GraphQLToken("[", BracketL, _line)
-      | BracketR.rune() => GraphQLToken("]", BracketR, _line)
-      | BraceL.rune() => GraphQLToken("{", BraceL, _line)
-      | PIPE.rune() => GraphQLToken("|", PIPE, _line)
-      | BraceR.rune() => GraphQLToken("}", BraceR, _line)
+      | COLON.rune() => GraphQLToken(COLON, ":", _line)
+      | EQUALS.rune() => GraphQLToken(EQUALS, "=", _line)
+      | AT.rune() => GraphQLToken(AT, "@", _line)
+      | BracketL.rune() => GraphQLToken(BracketL, "[", _line)
+      | BracketR.rune() => GraphQLToken(BracketR, "]", _line)
+      | BraceL.rune() => GraphQLToken(BraceL, "{", _line)
+      | PIPE.rune() => GraphQLToken(PIPE, "|", _line)
+      | BraceR.rune() => GraphQLToken(BraceR, "}", _line)
       | let c : U32 if ((c >= 'A') and (c <= 'Z'))
                     or ((c >= 'a') and (c <= 'z'))
                     or (c == '_')  =>
