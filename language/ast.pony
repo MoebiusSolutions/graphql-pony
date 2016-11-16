@@ -63,27 +63,22 @@ class Location
   Contains a range of UTF-8 character offsets and token references that
   identify the region of the source from which the AST derived.
   """
-
   /**
    * The character offset at which this Node begins.
    */
   let startOff: U32
-
   /**
    * The character offset at which this Node ends.
    */
   let endOff: U32
-
   /**
    * The Token at which this Node begins.
    */
   let startToken: Token
-
   /**
    * The Token at which this Node ends.
    */
   let endToken: Token
-
   /**
    * The Source document the AST represents.
    */
@@ -92,7 +87,8 @@ class Location
   new create(
     startOff': U32, endOff': U32,
     startToken': Token, endToken': Token,
-    source': Source) =>
+    source': Source
+  ) =>
     startOff = startOff'
     endOff = endOff'
     startToken = startToken'
