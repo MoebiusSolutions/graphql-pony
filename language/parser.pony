@@ -11,18 +11,18 @@ class GraphQLParser
     Throws GraphQLError if a syntax error is encountered.
     """
     let lexer = GraphQLLexer(env, source')
-    parseDocument(lexer)
+    parse_document(lexer)
 
   // Implements the parsing rules in the Document section.
   /**
   * Document : Definition+
   */
-  fun ref parseDocument(lexer: GraphQLLexer): DocumentNode ? =>
+  fun ref parse_document(lexer: GraphQLLexer): DocumentNode ? =>
     let start = lexer.token()
     expect(lexer, SOF)
     let definitions = Array[DefinitionNode]
     repeat
-      definitions.push(parseDefinition(lexer))
+      definitions.push(parse_definition(lexer))
     until skip(lexer, EOF) end
     DocumentNode(loc(lexer, start), definitions)
 
@@ -67,41 +67,41 @@ class GraphQLParser
    *   - FragmentDefinition
    *   - TypeSystemDefinition
    */
-  fun ref parseDefinition(lexer: GraphQLLexer): DefinitionNode ? =>
+  fun ref parse_definition(lexer: GraphQLLexer): DefinitionNode ? =>
     if (peek(lexer, BraceL)) then
-      parseOperationDefinition(lexer)
+      parse_operation_definition(lexer)
     elseif (peek(lexer, NAME)) then
       match lexer.token().value
         // Note: subscription is an experimental non-spec addition.
       | "query" =>
-        parseOperationDefinition(lexer)
+        parse_operation_definition(lexer)
       | "mutation" =>
-        parseOperationDefinition(lexer)
+        parse_operation_definition(lexer)
       | "subscription" =>
-        parseOperationDefinition(lexer)
+        parse_operation_definition(lexer)
 
       | "fragment" =>
-        parseFragmentDefinition(lexer)
+        parse_fragment_definition(lexer)
 
         // Note: the Type System IDL is an experimental non-spec addition.
       | "schema" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "scalar" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "type" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "interface" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "union" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "enum" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "input" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "extend" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       | "directive" =>
-        parseTypeSystemDefinition(lexer)
+        parse_type_system_definition(lexer)
       else
         unexpected(lexer)
         error
@@ -111,7 +111,7 @@ class GraphQLParser
       error
     end
 
-  fun parseOperationDefinition(lexer: GraphQLLexer): DefinitionNode =>
+  fun parse_operation_definition(lexer: GraphQLLexer): DefinitionNode =>
     // TODO
     lexer.advance()
 
@@ -123,7 +123,7 @@ class GraphQLParser
     let selectionSet': SelectionSetNode = SelectionSetNode(loc', Array[SelectionNode])
     OperationDefinitionNode(loc', TnQuery, name', variableDefinitions', directives', selectionSet')
 
-  fun parseFragmentDefinition(lexer: GraphQLLexer): DefinitionNode =>
+  fun parse_fragment_definition(lexer: GraphQLLexer): DefinitionNode =>
     // TODO
     lexer.advance()
 
@@ -133,7 +133,7 @@ class GraphQLParser
     let selectionSet' = SelectionSetNode(loc', Array[SelectionNode])
     FragmentDefinitionNode(loc', name', typeCondition', selectionSet')
 
-  fun parseTypeSystemDefinition(lexer: GraphQLLexer): DefinitionNode =>
+  fun parse_type_system_definition(lexer: GraphQLLexer): DefinitionNode =>
     // TODO
     lexer.advance()
 
