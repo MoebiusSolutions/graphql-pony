@@ -1,10 +1,11 @@
 class GraphQLParser
   let env: Env
+  var err: GraphQLError = GraphQLError("", 0, "Unknown error")
 
   new create(env': Env) =>
     env = env'
 
-  fun parse(source: String): DocumentNode =>
+  fun ref parse(source': String): DocumentNode ? =>
     """
     Given a GraphQL source, parses it into a Document.
     Throws GraphQLError if a syntax error is encountered.
@@ -16,7 +17,7 @@ class GraphQLParser
   /**
   * Document : Definition+
   */
-  fun parseDocument(lexer: GraphQLLexer): DocumentNode =>
+  fun ref parseDocument(lexer: GraphQLLexer): DocumentNode ? =>
     let start = lexer.token()
     expect(lexer, SOF)
     let definitions = Array[DefinitionNode]
