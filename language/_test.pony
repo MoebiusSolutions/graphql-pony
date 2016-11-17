@@ -8,10 +8,9 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
-    test(_TestAdd)
-    test(_TestSub)
     test(_TestLexerAdvance)
     test(_TestLexer)
+    test(_TestParser)
 
 class iso _TestLexerAdvance is UnitTest
   fun name(): String => "lexer advance"
@@ -67,14 +66,20 @@ class iso _TestLexer is UnitTest
       end
     end
 
-class iso _TestAdd is UnitTest
-  fun name():String => "addition"
-
+class iso _TestParser is UnitTest
+  fun name(): String => "parser"
   fun apply(h: TestHelper) =>
-    h.assert_eq[U32](4, 2 + 2)
-
-class iso _TestSub is UnitTest
-  fun name():String => "subtraction"
-
-  fun apply(h: TestHelper) =>
-    h.assert_eq[U32](2, 4 - 2)
+    let query = """
+      query FetchLukeAliased {
+        luke: human(id: "1000") {
+          name
+        }
+      }
+      """
+    let parser = GraphQLParser(h.env)
+    try
+      let document = parser.parse(query)
+      h.assert_eq[String]("Document", document.kind)
+    else
+      h.env.out.print(parser.err.string())
+    end
