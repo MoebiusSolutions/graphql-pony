@@ -111,19 +111,99 @@ class GraphQLParser
       error
     end
 
-  fun parse_operation_definition(lexer: GraphQLLexer): DefinitionNode =>
-    // TODO
-    lexer.advance()
+  fun ref parse_operation_definition(lexer: GraphQLLexer): DefinitionNode =>
+    let start = lexer.token()
+    if peek(lexer, BraceL) then
+      let loc' = loc(lexer, start)
+      let operation' = TnQuery
+      let name' = None
+      let variableDefinitions' = None
+      let directives' = None
+      let selectionSet' = parse_selection_set(lexer)
+      OperationDefinitionNode(
+        loc', operation', name', variableDefinitions', directives', selectionSet')
+    else
+      let operation: OperationTypeNode = parse_operation_type(lexer)
+      let name = if peek(lexer, NAME) then
+        parse_name(lexer)
+      else
+        None
+      end
+      let loc' = loc(lexer, start)
+      let operation' = operation
+      let name' = name
+      let variableDefinitions' = parse_variable_definitions(lexer)
+      let directives' = parse_directives(lexer)
+      let selectionSet' = parse_selection_set(lexer)
+      OperationDefinitionNode(
+        loc', operation', name', variableDefinitions', directives', selectionSet')
+    end
 
-    let loc' : Location = loc(lexer, lexer.token())
-    let operation': OperationTypeNode = TnQuery
-    let name': NameNode = NameNode("zzz")
-    let variableDefinitions': (Array[VariableDefinitionNode]|None) = None
-    let directives': (Array[DirectiveNode]|None) = None
-    let selectionSet': SelectionSetNode = SelectionSetNode(loc', Array[SelectionNode])
-    OperationDefinitionNode(loc', TnQuery, name', variableDefinitions', directives', selectionSet')
+  fun ref parse_selection_set(lexer: GraphQLLexer): SelectionSetNode =>
+    let start = lexer.token()
+    SelectionSetNode(loc(lexer, start), many(lexer, BraceL, parse_selection, BraceR))
 
-  fun parse_fragment_definition(lexer: GraphQLLexer): DefinitionNode =>
+  fun ref parse_selection(lexer: GraphQLLexer) =>
+    if peek(lexer, SPREAD) then
+      parse_fragment(lexer)
+    else
+      parse_field(lexer)
+    end
+
+  // Implements the parsing rules in the Fragments section.
+
+  fun ref parse_fragment(lexer: GraphQLLexer): (FragmentSpreadNode|InlineFragmentNode) =>
+    """
+    Corresponds to both FragmentSpread and InlineFragment in the spec.
+
+    FragmentSpread : ... FragmentName Directives?
+
+    InlineFragment : ... TypeCondition? Directives? SelectionSet
+    """
+    let start = lexer.token()
+    expect(lexer, SPREAD)
+    if peek(lexer, NAME) and (lexer.token().value != "on") then
+      let name = parse_fragment_name(lexer)
+      let directives = parse_directives(lexer)
+      FragmentSpreadNode(loc(lexer, start), name, directives)
+    else
+      let typeCondition = if (lexer.token().value == "on") then
+        lexer.advance()
+        parse_named_type(lexer)
+      else
+        None
+      end
+      let directives = parse_directives(lexer)
+      let selectionSet = parse_selection_set(lexer)
+      FragmentSpreadNode(loc(lexer, start), typeCondition, directives, selectionSet)
+    end
+
+  fun ref parse_field(lexer: GraphQLLexer) =>
+    None
+
+  fun ref parse_operation_type(lexer: GraphQLLexer): OperationTypeNode =>
+    None
+
+  fun ref parse_name(lexer: GraphQLLexer) =>
+    None
+
+  fun ref parse_named_type(lexer: GraphQLLexer) =>
+    None
+
+  fun ref parse_variable_definitions(lexer: GraphQLLexer) =>
+    None
+
+  fun ref parse_directives(lexer: GraphQLLexer): Array[DirectiveNode] =>
+    """
+    Directives : Directive+
+    """
+    let directives = Array[DirectiveNode]
+    while peek(lexer, AT) do
+      directives.push(parse_directive(lexer))
+    end
+    directives
+
+  fun ref parse_fragment_definition(lexer: GraphQLLexer): DefinitionNode =>
     // TODO
     lexer.advance()
 

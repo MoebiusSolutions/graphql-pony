@@ -171,7 +171,7 @@ class OperationDefinitionNode
   let selectionSet: SelectionSetNode
   new create(loc' : Location,
     operation': OperationTypeNode,
-    name': NameNode,
+    name': (NameNode|None),
     variableDefinitions': (Array[VariableDefinitionNode]|None),
     directives': (Array[DirectiveNode]|None),
     selectionSet': SelectionSetNode
