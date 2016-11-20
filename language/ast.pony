@@ -141,9 +141,10 @@ type ASTNode is
 // Name
 class NameNode
   let kind : String = "Name"
-  let loc: (Location|None) = None
+  let loc: (Location|None)
   let value: String
-  new create(value' : String) =>
+  new create(loc': Location, value' : String) =>
+    loc = loc'
     value = value'
 
 // Document
@@ -231,13 +232,23 @@ class FieldNode
   let loc: (Location|None)
   let alias: (NameNode|None)
   let name: NameNode
-  let arguments: (Array[ArgumentNode]|None) = None
-  let directives: (Array[DirectiveNode]|None) = None
-  let selectionSet: (SelectionSetNode|None) = None
-  new create(loc': Location, alias': NameNode, name': NameNode) =>
+  let arguments: (Array[ArgumentNode]|None)
+  let directives: (Array[DirectiveNode]|None)
+  let selectionSet: (SelectionSetNode|None)
+  new create(
+    loc': Location,
+    alias': (NameNode|None),
+    name': NameNode,
+    arguments': (Array[ArgumentNode]|None),
+    directives': (Array[DirectiveNode]|None),
+    selectionSet': (SelectionSetNode|None)
+  ) =>
     loc = loc'
     alias = alias'
     name = name'
+    arguments = arguments'
+    directives = directives'
+    selectionSet = selectionSet'
 
 class ArgumentNode
   let kind: String = "Argument"
@@ -254,19 +265,31 @@ class FragmentSpreadNode
   let kind: String = "FragmentSpread"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
-  new create(loc': Location, name': NameNode) =>
+  let directives: (Array[DirectiveNode]|None)
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None)
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
 
 class InlineFragmentNode
   let kind: String = "InlineFragment"
   let loc: (Location|None)
-  let typeCondition: (NamedTypeNode|None) = None
-  let directives: (Array[DirectiveNode]|None) = None
+  let typeCondition: (NamedTypeNode|None)
+  let directives: (Array[DirectiveNode]|None)
   let selectionSet: SelectionSetNode
-  new create(loc': Location, selectionSet': SelectionSetNode) =>
+  new create(
+    loc': Location,
+    typeCondition': (NamedTypeNode|None),
+    directives': (Array[DirectiveNode]|None),
+    selectionSet': SelectionSetNode
+  ) =>
     loc = loc'
+    typeCondition = typeCondition'
+    directives = directives'
     selectionSet = selectionSet'
 
 class FragmentDefinitionNode
@@ -274,15 +297,19 @@ class FragmentDefinitionNode
   let loc: (Location|None)
   let name: NameNode
   let typeCondition: NamedTypeNode
-  let directives: (Array[DirectiveNode]|None) = None
+  let directives: (Array[DirectiveNode]|None)
   let selectionSet: SelectionSetNode
-  new create(loc': Location, name': NameNode,
+  new create(
+    loc': Location,
+    name': NameNode,
     typeCondition': NamedTypeNode,
+    directives': (Array[DirectiveNode]|None),
     selectionSet': SelectionSetNode
   ) =>
     loc = loc'
     name = name'
     typeCondition = typeCondition'
+    directives = directives'
     selectionSet = selectionSet'
 
 // Values
@@ -347,9 +374,10 @@ class EnumValueNode
 class ListValueNode
   let kind: String = "ListValue"
   let loc: (Location|None)
-  // let values: Array[ValueNode]
-  new create(loc': Location) =>
+  let values: Array[ValueNode]
+  new create(loc': Location, values': Array[ValueNode]) =>
     loc = loc'
+    values = values'
 
 class ObjectValueNode
   let kind: String = "ObjectValue"
