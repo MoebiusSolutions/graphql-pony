@@ -40,7 +40,7 @@ class GraphQLParser
     syntax_error(
       "TODO",
       token'.line,
-      "Expected "+ kind.string() +", found "+ kind.string()
+      "Expected "+ kind.string() +", found "+ token'.kind.string()
     )
     error
 

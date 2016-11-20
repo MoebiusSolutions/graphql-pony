@@ -10,6 +10,7 @@ actor Main is TestList
   fun tag tests(test: PonyTest) =>
     test(_TestLexerAdvance)
     test(_TestLexer)
+    test(_TestProvidesUsefulError)
     test(_TestParser)
 
 class iso _TestLexerAdvance is UnitTest
@@ -64,6 +65,20 @@ class iso _TestLexer is UnitTest
           + token.value + " "
           + token.line.string())
       end
+    end
+
+class iso _TestProvidesUsefulError is UnitTest
+  fun name(): String => "parse provides useful errors"
+  fun apply(h: TestHelper) =>
+    let parser = GraphQLParser(h.env)
+    try
+      let document = parser.parse("{")
+      h.fail("Should have raised an error")
+    else
+      h.assert_eq[String](
+        "Syntax Error GraphQL (1:2) Expected NAME, found EOF",
+        parser.err.string()
+      )
     end
 
 class iso _TestParser is UnitTest

@@ -55,9 +55,11 @@ class GraphQLError
     message = message'
 
   fun string(): String =>
-    let line = try
-      locations(0)._1
+    let loc = try
+      locations(0)
     else
-      0
+      (0,0)
     end
-    message + " at " + line.string()
+    "Syntax Error GraphQL ("
+      + (1+loc._1).string() +":"+ (1+loc._2).string()
+    +") " + message
