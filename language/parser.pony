@@ -480,13 +480,286 @@ class GraphQLParser
     end
     parse_name(lexer)
 
-  fun parse_type_system_definition(lexer: GraphQLLexer): DefinitionNode =>
-    // TODO
-    lexer.advance()
+// Implements the parsing rules in the Type Definition section.
 
-    let directives' = Array[DirectiveNode]
-    let operationTypes' = Array[OperationTypeDefinitionNode]
-    SchemaDefinitionNode(loc(lexer, lexer.token()), directives', operationTypes')
+  fun ref parse_type_system_definition(
+    lexer: GraphQLLexer
+  ): TypeSystemDefinitionNode ? =>
+    """
+    TypeSystemDefinition :
+      - SchemaDefinition
+      - TypeDefinition
+      - TypeExtensionDefinition
+      - DirectiveDefinition
+
+    TypeDefinition :
+      - ScalarTypeDefinition
+      - ObjectTypeDefinition
+      - InterfaceTypeDefinition
+      - UnionTypeDefinition
+      - EnumTypeDefinition
+      - InputObjectTypeDefinition
+    """
+    if peek(lexer, NAME) then
+      match lexer.token().value
+      | "schema" => return parse_schema_definition(lexer)
+      | "scalar" => return parse_scalar_type_definition(lexer)
+      | "type" => return parse_object_type_definition(lexer)
+      | "interface" => return parse_interface_type_definition(lexer)
+      | "union" => return parse_union_type_definition(lexer)
+      | "enum" => return parse_enum_type_definition(lexer)
+      | "input" => return parse_input_object_type_definition(lexer)
+      | "extend" => return parse_type_extension_definition(lexer)
+      | "directive" => return parse_directive_definition(lexer)
+      end
+    end
+    unexpected(lexer)
+    error
+
+  fun ref parse_schema_definition(lexer: GraphQLLexer): SchemaDefinitionNode ? =>
+    """
+    SchemaDefinition : schema Directives? { OperationTypeDefinition+ }
+
+    OperationTypeDefinition : OperationType : NamedType
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "schema")
+    let directives = parse_directives(lexer)
+    let operationTypes = many[OperationTypeDefinitionNode](
+      lexer,
+      BraceL,
+      {(s: GraphQLParser, l: GraphQLLexer):OperationTypeDefinitionNode ? =>
+        s.parse_operation_type_definition(l)} ref,
+      BraceR
+    )
+    SchemaDefinitionNode(loc(lexer, start),
+      directives, operationTypes)
+
+  fun ref parse_operation_type_definition(
+    lexer: GraphQLLexer
+  ): OperationTypeDefinitionNode ? =>
+    let start = lexer.token()
+    let operation = parse_operation_type(lexer)
+    expect(lexer, COLON)
+    let type' = parse_named_type(lexer)
+    OperationTypeDefinitionNode(
+      loc(lexer, start), operation, type')
+
+  fun ref parse_scalar_type_definition(
+    lexer: GraphQLLexer
+  ): ScalarTypeDefinitionNode ? =>
+    """
+    ScalarTypeDefinition : scalar Name Directives?
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "scalar")
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    ScalarTypeDefinitionNode(loc(lexer, start), name, directives)
+
+  fun ref parse_object_type_definition(lexer: GraphQLLexer): ObjectTypeDefinitionNode ? =>
+    """
+    ObjectTypeDefinition :
+      - type Name ImplementsInterfaces? Directives? { FieldDefinition+ }
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "type")
+    let name = parse_name(lexer)
+    let interfaces = parse_implements_interfaces(lexer)
+    let directives = parse_directives(lexer)
+    let fields = any[FieldDefinitionNode](
+      lexer,
+      BraceL,
+      {(s: GraphQLParser, l: GraphQLLexer): FieldDefinitionNode ? =>
+        s.parse_field_definition(l)} ref,
+      BracketR
+    )
+    ObjectTypeDefinitionNode(loc(lexer, start), name, interfaces, directives, fields)
+
+  fun ref parse_implements_interfaces(lexer: GraphQLLexer): Array[NamedTypeNode] ? =>
+    """
+    ImplementsInterfaces : implements NamedType+
+    """
+    let types = Array[NamedTypeNode]
+    if lexer.token().value == "implements" then
+      lexer.advance()
+      repeat
+        types.push(parse_named_type(lexer))
+      until not peek(lexer, NAME) end
+    end
+    types
+
+  fun ref parse_field_definition(lexer: GraphQLLexer): FieldDefinitionNode ? =>
+    """
+    FieldDefinition : Name ArgumentsDefinition? : Type Directives?
+    """
+    let start = lexer.token()
+    let name = parse_name(lexer)
+    let args = parse_argument_defs(lexer)
+    expect(lexer, COLON)
+    let type' = parse_type_reference(lexer)
+    let directives = parse_directives(lexer)
+    FieldDefinitionNode(loc(lexer, start), name, args, type', directives)
+
+  fun ref parse_argument_defs(lexer: GraphQLLexer): Array[InputValueDefinitionNode] ? =>
+    """
+    ArgumentsDefinition : ( InputValueDefinition+ )
+    """
+    if not peek(lexer, ParenL) then
+      return Array[InputValueDefinitionNode]
+    end
+    many[InputValueDefinitionNode](
+      lexer,
+      ParenL,
+      {(s: GraphQLParser, l: GraphQLLexer): InputValueDefinitionNode ? =>
+        s.parse_input_value_def(l)} ref,
+      ParenR
+    )
+
+  fun ref parse_input_value_def(lexer: GraphQLLexer): InputValueDefinitionNode ? =>
+    """
+    InputValueDefinition : Name : Type DefaultValue? Directives?
+    """
+    let start = lexer.token()
+    let name = parse_name(lexer)
+    expect(lexer, COLON)
+    let type' = parse_type_reference(lexer)
+    let defaultValue = if skip(lexer, EQUALS) then
+      parse_const_value(lexer)
+    else
+      None
+    end
+    let directives = parse_directives(lexer)
+    InputValueDefinitionNode(loc(lexer, start), name, type', defaultValue, directives)
+
+  fun ref parse_interface_type_definition(
+    lexer: GraphQLLexer
+  ): InterfaceTypeDefinitionNode ? =>
+    """
+    InterfaceTypeDefinition : interface Name Directives? { FieldDefinition+ }
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "interface")
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    let fields = any[FieldDefinitionNode](
+      lexer,
+      BraceL,
+      {(s: GraphQLParser, l: GraphQLLexer): FieldDefinitionNode ? =>
+        s.parse_field_definition(l)} ref,
+      BraceR
+    )
+    InterfaceTypeDefinitionNode(loc(lexer, start), name, directives, fields)
+
+  fun ref parse_union_type_definition(lexer: GraphQLLexer): UnionTypeDefinitionNode ? =>
+    """
+    UnionTypeDefinition : union Name Directives? = UnionMembers
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "union")
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    expect(lexer, EQUALS)
+    let types = parse_union_members(lexer)
+    UnionTypeDefinitionNode(loc(lexer, start), name, directives, types)
+
+  fun ref parse_union_members(lexer: GraphQLLexer): Array[NamedTypeNode] ? =>
+    """
+    UnionMembers :
+     - NamedType
+     - UnionMembers | NamedType
+    """
+    let members = Array[NamedTypeNode]
+    repeat
+      members.push(parse_named_type(lexer))
+    until not skip(lexer, PIPE) end
+    members
+
+  fun ref parse_enum_type_definition(lexer: GraphQLLexer): EnumTypeDefinitionNode ? =>
+    """
+    EnumTypeDefinition : enum Name Directives? { EnumValueDefinition+ }
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "enum")
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    let values = many[EnumValueDefinitionNode](
+      lexer,
+      BraceL,
+      {(s: GraphQLParser, l: GraphQLLexer): EnumValueDefinitionNode ? =>
+        s.parse_enum_value_definition(l)} ref,
+      BraceR
+    )
+    EnumTypeDefinitionNode(loc(lexer, start), name, directives, values)
+
+  fun ref parse_enum_value_definition(lexer: GraphQLLexer): EnumValueDefinitionNode ? =>
+    """
+    EnumValueDefinition : EnumValue Directives?
+
+    EnumValue : Name
+    """
+    let start = lexer.token()
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    EnumValueDefinitionNode(loc(lexer, start), name, directives)
+
+  fun ref parse_input_object_type_definition(
+    lexer: GraphQLLexer
+  ): InputObjectTypeDefinitionNode ? =>
+    """
+    InputObjectTypeDefinition : input Name Directives? { InputValueDefinition+ }
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "input")
+    let name = parse_name(lexer)
+    let directives = parse_directives(lexer)
+    let fields = any[InputValueDefinitionNode](
+      lexer,
+      BraceL,
+      {(s: GraphQLParser, l: GraphQLLexer): InputValueDefinitionNode ? =>
+        s.parse_input_value_def(l)} ref,
+      BraceR
+    )
+    InputObjectTypeDefinitionNode(loc(lexer, start), name, directives, fields)
+
+  fun ref parse_type_extension_definition(
+    lexer: GraphQLLexer
+  ): TypeExtensionDefinitionNode ? =>
+    """
+    TypeExtensionDefinition : extend ObjectTypeDefinition
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "extend")
+    let definition = parse_object_type_definition(lexer)
+    TypeExtensionDefinitionNode(loc(lexer, start), definition)
+
+  fun ref parse_directive_definition(lexer: GraphQLLexer): DirectiveDefinitionNode ? =>
+    """
+    DirectiveDefinition :
+      - directive @ Name ArgumentsDefinition? on DirectiveLocations
+    """
+    let start = lexer.token()
+    expect_keyword(lexer, "directive")
+    expect(lexer, AT)
+    let name = parse_name(lexer)
+    let args = parse_argument_defs(lexer)
+    expect_keyword(lexer, "on")
+    let locations = parse_directive_locations(lexer)
+    DirectiveDefinitionNode(loc(lexer, start), name, args, locations)
+
+  fun ref parse_directive_locations(lexer: GraphQLLexer): Array[NameNode] ? =>
+    """
+    DirectiveLocations :
+      - Name
+      - DirectiveLocations | Name
+    """
+    let locations = Array[NameNode]
+    repeat
+      locations.push(parse_name(lexer))
+    until not skip(lexer, PIPE) end
+    locations
+
+  // Core parsing utility functions
 
   fun peek(lexer: GraphQLLexer, kind: TokenKind): Bool =>
     """

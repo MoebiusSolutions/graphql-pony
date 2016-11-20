@@ -486,21 +486,30 @@ class ScalarTypeDefinitionNode
   let kind: String = "ScalarTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
-  new create(loc': Location, name': NameNode) =>
+  let directives: (Array[DirectiveNode]|None)
+  new create(loc': Location, name': NameNode, directives': (Array[DirectiveNode]|None)) =>
     loc = loc'
     name = name'
+    directives = directives'
 
 class ObjectTypeDefinitionNode
   let kind: String = "ObjectTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let interfaces: (Array[NamedTypeNode]|None) = None
-  let directives: (Array[DirectiveNode]|None) = None
+  let interfaces: (Array[NamedTypeNode]|None)
+  let directives: (Array[DirectiveNode]|None)
   let fields: Array[FieldDefinitionNode]
-  new create(loc': Location, name': NameNode, fields': Array[FieldDefinitionNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    interfaces': (Array[NamedTypeNode]|None),
+    directives': (Array[DirectiveNode]|None),
+    fields': Array[FieldDefinitionNode]
+  ) =>
     loc = loc'
     name = name'
+    interfaces = interfaces'
+    directives = directives'
     fields = fields'
 
 class FieldDefinitionNode
@@ -509,87 +518,130 @@ class FieldDefinitionNode
   let name: NameNode
   let arguments: Array[InputValueDefinitionNode]
   let typeNode: TypeNode
-  let directives: (Array[DirectiveNode]|None) = None
-  new create(loc': Location,
+  let directives: (Array[DirectiveNode]|None)
+  new create(
+    loc': Location,
     name': NameNode,
     arguments': Array[InputValueDefinitionNode],
-    typeNode': TypeNode
+    typeNode': TypeNode,
+    directives': (Array[DirectiveNode]|None)
   ) =>
     loc = loc'
     name = name'
     arguments = arguments'
     typeNode = typeNode'
+    directives = directives'
 
 class InputValueDefinitionNode
   let kind: String = "InputValueDefinition"
   let loc: (Location|None)
   let name: NameNode
   let typeNode: TypeNode
-  let defaultValue: (ValueNode|None) = None
-  let directives: (Array[DirectiveNode]|None) = None
-  new create(loc': Location, name': NameNode, typeNode': TypeNode) =>
+  let defaultValue: (ValueNode|None)
+  let directives: (Array[DirectiveNode]|None)
+  new create(
+    loc': Location,
+    name': NameNode,
+    typeNode': TypeNode,
+    defaultValue': (ValueNode|None),
+    directives': (Array[DirectiveNode]|None)
+  ) =>
     loc = loc'
     name = name'
     typeNode = typeNode'
+    defaultValue = defaultValue'
+    directives = directives'
 
 class InterfaceTypeDefinitionNode
   let kind: String = "InterfaceTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
+  let directives: (Array[DirectiveNode]|None)
   let fields: Array[FieldDefinitionNode]
-  new create(loc': Location, name': NameNode, fields': Array[FieldDefinitionNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None),
+    fields': Array[FieldDefinitionNode]
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
     fields = fields'
 
 class UnionTypeDefinitionNode
   let kind: String = "UnionTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
+  let directives: (Array[DirectiveNode]|None)
   let types: Array[NamedTypeNode]
-  new create(loc': Location, name': NameNode, types': Array[NamedTypeNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None),
+    types': Array[NamedTypeNode]
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
     types = types'
 
 class EnumTypeDefinitionNode
   let kind: String = "EnumTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
+  let directives: (Array[DirectiveNode]|None)
   let values: Array[EnumValueDefinitionNode]
-  new create(loc': Location, name': NameNode, values': Array[EnumValueDefinitionNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None),
+    values': Array[EnumValueDefinitionNode]
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
     values = values'
 
 class EnumValueDefinitionNode
   let kind: String = "EnumValueDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
-  new create(loc': Location, name': NameNode) =>
+  let directives: (Array[DirectiveNode]|None)
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None)
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
 
 class InputObjectTypeDefinitionNode
   let kind: String = "InputObjectTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let directives: (Array[DirectiveNode]|None) = None
+  let directives: (Array[DirectiveNode]|None)
   let fields: Array[InputValueDefinitionNode]
-  new create(loc': Location, name': NameNode, fields': Array[InputValueDefinitionNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    directives': (Array[DirectiveNode]|None),
+    fields': Array[InputValueDefinitionNode]
+  ) =>
     loc = loc'
     name = name'
+    directives = directives'
     fields = fields'
 
 class TypeExtensionDefinitionNode
   let kind: String = "TypeExtensionDefinition"
   let loc: (Location|None)
   let definition: ObjectTypeDefinitionNode
-  new create(loc': Location, definition': ObjectTypeDefinitionNode) =>
+  new create(
+    loc': Location,
+    definition': ObjectTypeDefinitionNode
+  ) =>
     loc = loc'
     definition = definition'
 
@@ -597,9 +649,15 @@ class DirectiveDefinitionNode
   let kind: String = "DirectiveDefinition"
   let loc: (Location|None)
   let name: NameNode
-  let arguments: (Array[InputValueDefinitionNode]|None) = None
+  let arguments: (Array[InputValueDefinitionNode]|None)
   let locations: Array[NameNode]
-  new create(loc': Location, name': NameNode, locations': Array[NameNode]) =>
+  new create(
+    loc': Location,
+    name': NameNode,
+    arguments': (Array[InputValueDefinitionNode]|None),
+    locations': Array[NameNode]
+  ) =>
     loc = loc'
     name = name'
+    arguments = arguments'
     locations = locations'
