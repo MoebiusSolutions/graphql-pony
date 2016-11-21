@@ -85,26 +85,33 @@ class Location
   /**
    * The Token at which this Node begins.
    */
-  let startToken: Token
+  let startToken: (Token|None)
   /**
    * The Token at which this Node ends.
    */
-  let endToken: Token
+  let endToken: (Token|None)
   /**
    * The Source document the AST represents.
    */
-  let source: Source
+  let source: (Source|None)
 
   new create(
-    startOff': U32, endOff': U32,
-    startToken': Token, endToken': Token,
-    source': Source
+    startOff': U32,
+    endOff': U32,
+    startToken': (Token|None) = None,
+    endToken': (Token|None) = None,
+    source': (Source|None) = None
   ) =>
     startOff = startOff'
     endOff = endOff'
     startToken = startToken'
     endToken = endToken'
     source = source'
+  fun string(): String iso^ =>
+    recover
+      String().append("(").append(startOff.string())
+        .append(",").append(endOff.string()).append(")")
+    end
 
 /**
  * The list of all possible AST node types.
@@ -157,15 +164,24 @@ class NameNode
   new create(loc': Location, value' : String) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Document
-class DocumentNode
+class DocumentNode is (Equatable[DocumentNode] & Stringable)
   let kind : String = "Document"
   let loc: (Location|None)
   let definitions: Array[DefinitionNode]
   new create(loc' : Location, definitions': Array[DefinitionNode]) =>
     loc = loc'
     definitions = definitions'
+  fun string(): String iso^ =>
+    let s = String().append(kind).append("[")
+    for d in definitions.values() do
+      s.append(d.string()).append(" ")
+    end
+    s.append("]")
+    s.clone()
 
 type DefinitionNode is
   ( OperationDefinitionNode
@@ -181,7 +197,8 @@ class OperationDefinitionNode
   let variableDefinitions: (Array[VariableDefinitionNode]|None)
   let directives: (Array[DirectiveNode]|None)
   let selectionSet: SelectionSetNode
-  new create(loc' : Location,
+  new create(
+    loc' : Location,
     operation': OperationTypeNode,
     name': (NameNode|None),
     variableDefinitions': (Array[VariableDefinitionNode]|None),
@@ -194,6 +211,9 @@ class OperationDefinitionNode
     variableDefinitions = variableDefinitions'
     directives = directives'
     selectionSet = selectionSet'
+  fun string(): String iso^ =>
+    let s = String().append(kind).append(":").append(selectionSet.string())
+    s.clone()
 
 // Note: subscription is an experimental non-spec addition.
 primitive TnQuery
@@ -215,6 +235,8 @@ class VariableDefinitionNode
     variable = variable'
     typeNode = typeNode'
     defaultValue = defaultValue'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class VariableNode
   let kind: String = "Variable"
@@ -223,14 +245,22 @@ class VariableNode
   new create(loc': Location, name': NameNode) =>
     loc = loc'
     name = name'
+  fun string(): String iso^ =>
+    kind.clone()
 
-class SelectionSetNode
+class SelectionSetNode is Stringable
   let kind: String = "SelectionSet"
   let loc: (Location|None)
   let selections: Array[SelectionNode]
   new create(loc': Location, selections': Array[SelectionNode]) =>
     loc = loc'
     selections = selections'
+  fun string(): String iso^ =>
+    let s = String().append(kind).append(":")
+    for n in selections.values() do
+      s.append(n.string())
+    end
+    s.clone()
 
 type SelectionNode is
   ( FieldNode
@@ -260,6 +290,8 @@ class FieldNode
     arguments = arguments'
     directives = directives'
     selectionSet = selectionSet'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ArgumentNode
   let kind: String = "Argument"
@@ -270,6 +302,8 @@ class ArgumentNode
     loc = loc'
     name = name'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Fragments
 class FragmentSpreadNode
@@ -285,6 +319,8 @@ class FragmentSpreadNode
     loc = loc'
     name = name'
     directives = directives'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class InlineFragmentNode
   let kind: String = "InlineFragment"
@@ -302,6 +338,8 @@ class InlineFragmentNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class FragmentDefinitionNode
   let kind: String = "FragmentDefinition"
@@ -322,6 +360,8 @@ class FragmentDefinitionNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Values
 type ValueNode is
@@ -343,6 +383,8 @@ class IntValueNode
   new create(loc': Location, value': String) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class FloatValueNode
   let kind: String = "FloatValue"
@@ -351,6 +393,8 @@ class FloatValueNode
   new create(loc': Location, value': String) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class StringValueNode
   let kind: String = "StringValue"
@@ -359,6 +403,8 @@ class StringValueNode
   new create(loc': Location, value': String) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class BooleanValueNode
   let kind: String = "BooleanValue"
@@ -367,12 +413,16 @@ class BooleanValueNode
   new create(loc': Location, value': Bool) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class NullValueNode
   let kind: String = "NullValue"
   let loc: (Location|None)
   new create(loc': Location) =>
     loc = loc'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class EnumValueNode
   let kind: String = "EnumValue"
@@ -381,6 +431,8 @@ class EnumValueNode
   new create(loc': Location, value': String) =>
     loc = loc'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ListValueNode
   let kind: String = "ListValue"
@@ -389,6 +441,8 @@ class ListValueNode
   new create(loc': Location, values': Array[ValueNode]) =>
     loc = loc'
     values = values'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ObjectValueNode
   let kind: String = "ObjectValue"
@@ -397,6 +451,8 @@ class ObjectValueNode
   new create(loc': Location, fields': Array[ObjectFieldNode]) =>
     loc = loc'
     fields = fields'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ObjectFieldNode
   let kind: String = "ObjectField"
@@ -407,6 +463,8 @@ class ObjectFieldNode
     loc = loc'
     name = name'
     value = value'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Directives
 class DirectiveNode
@@ -418,6 +476,8 @@ class DirectiveNode
     loc = loc'
     name = name'
     arguments = arguments'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Type Reference
 type TypeNode is
@@ -433,6 +493,8 @@ class NamedTypeNode
   new create(loc': Location, name': NameNode) =>
     loc = loc'
     name = name'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ListTypeNode
   let kind: String = "ListType"
@@ -441,6 +503,8 @@ class ListTypeNode
   new create(loc': Location, typeNode': TypeNode) =>
     loc = loc'
     typeNode = typeNode'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class NonNullTypeNode
   let kind: String = "NonNullType"
@@ -449,6 +513,8 @@ class NonNullTypeNode
   new create(loc': Location, typeNode': (NamedTypeNode | ListTypeNode)) =>
     loc = loc'
     typeNode = typeNode'
+  fun string(): String iso^ =>
+    kind.clone()
 
 // Type System Definition
 type TypeSystemDefinitionNode is
@@ -470,19 +536,24 @@ class SchemaDefinitionNode
     loc = loc'
     directives = directives'
     operationTypes = operationTypes'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class OperationTypeDefinitionNode
   let kind: String = "OperationTypeDefinition"
   let loc: (Location|None)
   let operation: OperationTypeNode
   let typeNode: NamedTypeNode
-  new create(loc': Location,
+  new create(
+    loc': Location,
     operation': OperationTypeNode,
     typeNode': NamedTypeNode
   ) =>
     loc = loc'
     operation = operation'
     typeNode = typeNode'
+  fun string(): String iso^ =>
+    kind.clone()
 
 type TypeDefinitionNode is
   ( ScalarTypeDefinitionNode
@@ -502,6 +573,8 @@ class ScalarTypeDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class ObjectTypeDefinitionNode
   let kind: String = "ObjectTypeDefinition"
@@ -522,6 +595,8 @@ class ObjectTypeDefinitionNode
     interfaces = interfaces'
     directives = directives'
     fields = fields'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class FieldDefinitionNode
   let kind: String = "FieldDefinition"
@@ -542,6 +617,8 @@ class FieldDefinitionNode
     arguments = arguments'
     typeNode = typeNode'
     directives = directives'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class InputValueDefinitionNode
   let kind: String = "InputValueDefinition"
@@ -562,6 +639,8 @@ class InputValueDefinitionNode
     typeNode = typeNode'
     defaultValue = defaultValue'
     directives = directives'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class InterfaceTypeDefinitionNode
   let kind: String = "InterfaceTypeDefinition"
@@ -579,6 +658,8 @@ class InterfaceTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class UnionTypeDefinitionNode
   let kind: String = "UnionTypeDefinition"
@@ -596,6 +677,8 @@ class UnionTypeDefinitionNode
     name = name'
     directives = directives'
     types = types'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class EnumTypeDefinitionNode
   let kind: String = "EnumTypeDefinition"
@@ -613,6 +696,8 @@ class EnumTypeDefinitionNode
     name = name'
     directives = directives'
     values = values'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class EnumValueDefinitionNode
   let kind: String = "EnumValueDefinition"
@@ -627,6 +712,8 @@ class EnumValueDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class InputObjectTypeDefinitionNode
   let kind: String = "InputObjectTypeDefinition"
@@ -644,6 +731,8 @@ class InputObjectTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class TypeExtensionDefinitionNode
   let kind: String = "TypeExtensionDefinition"
@@ -655,6 +744,8 @@ class TypeExtensionDefinitionNode
   ) =>
     loc = loc'
     definition = definition'
+  fun string(): String iso^ =>
+    kind.clone()
 
 class DirectiveDefinitionNode
   let kind: String = "DirectiveDefinition"
@@ -672,3 +763,5 @@ class DirectiveDefinitionNode
     name = name'
     arguments = arguments'
     locations = locations'
+  fun string(): String iso^ =>
+    kind.clone()

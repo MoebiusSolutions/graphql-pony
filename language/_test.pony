@@ -21,6 +21,7 @@ actor Main is TestList
     test(_TestParsesAnonymousSubscriptionOperations)
     test(_TestParsesNamedMutationOperations)
     test(_TestParsesNamedSubscriptionOperations)
+    test(_TestItCreatesAst)
     test(_TestLexerAdvance)
     test(_TestLexer)
     test(_TestParser)
@@ -336,6 +337,98 @@ class iso _TestParsesNamedSubscriptionOperations is UnitTest
         subscriptionField
       }
       """)
+
+class iso _TestItCreatesAst is UnitTest
+  fun name(): String => "it creates ast"
+  fun apply(h: TestHelper) ? =>
+    let source = """
+    {
+      node(id: 4) {
+        id,
+        name
+      }
+    }
+    """
+
+    let result = GraphQLParser(h.env).parse(source)
+    let expect = DocumentNode(
+      Location(0, 41),
+      Array[DefinitionNode].push(
+        OperationDefinitionNode(where
+          loc' = Location(0, 40),
+          operation' = TnQuery,
+          name' = None,
+          variableDefinitions' = None,
+          directives' = None,
+          selectionSet' = SelectionSetNode(
+            Location(0, 40),
+            Array[SelectionNode]
+          )
+        )
+      )
+    )
+    h.assert_eq[DocumentNode](expect, result)
+/*
+  expect(result).to.containSubset(
+    { kind: Kind.DOCUMENT,
+      loc: { start: 0, end: 41 },
+      definitions:
+      [ { kind: Kind.OPERATION_DEFINITION,
+        loc: { start: 0, end: 40 },
+        operation: 'query',
+        name: null,
+        variableDefinitions: null,
+        directives: [],
+        selectionSet:
+        { kind: Kind.SELECTION_SET,
+          loc: { start: 0, end: 40 },
+          selections:
+          [ { kind: Kind.FIELD,
+            loc: { start: 4, end: 38 },
+            alias: null,
+            name:
+            { kind: Kind.NAME,
+              loc: { start: 4, end: 8 },
+              value: 'node' },
+            arguments:
+            [ { kind: Kind.ARGUMENT,
+              name:
+              { kind: Kind.NAME,
+                loc: { start: 9, end: 11 },
+                value: 'id' },
+              value:
+              { kind: Kind.INT,
+                loc: { start: 13, end: 14 },
+                value: '4' },
+              loc: { start: 9, end: 14 } } ],
+            directives: [],
+            selectionSet:
+            { kind: Kind.SELECTION_SET,
+              loc: { start: 16, end: 38 },
+              selections:
+              [ { kind: Kind.FIELD,
+                loc: { start: 22, end: 24 },
+                alias: null,
+                name:
+                { kind: Kind.NAME,
+                  loc: { start: 22, end: 24 },
+                  value: 'id' },
+                arguments: [],
+                directives: [],
+                selectionSet: null },
+              { kind: Kind.FIELD,
+                loc: { start: 30, end: 34 },
+                alias: null,
+                name:
+                { kind: Kind.NAME,
+                  loc: { start: 30, end: 34 },
+                  value: 'name' },
+                arguments: [],
+                directives: [],
+                selectionSet: null } ] } } ] } } ] }
+  );
+});
+*/
 
 class iso _TestParser is UnitTest
   fun name(): String => "parser"
