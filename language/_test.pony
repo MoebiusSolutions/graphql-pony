@@ -16,6 +16,7 @@ actor Main is TestList
     test(_TestDoesNotAcceptFragmentsSpreadOfOn)
     test(_TestParsesMultibyteCharacters)
     test(_TestParsesKitchenSink)
+    test(_TestAllowsNonKeywordsAnywhereANameIsAllowed)
     test(_TestLexerAdvance)
     test(_TestLexer)
     test(_TestParser)
@@ -263,6 +264,37 @@ fragment frag on Friend {
       """)
     else
       h.fail("Failed: " + parser.err.string())
+    end
+
+class iso _TestAllowsNonKeywordsAnywhereANameIsAllowed is UnitTest
+  fun name(): String => "allows non-keywords anywhere a Name is allowed"
+  fun apply(h: TestHelper) ? =>
+    let nonKeywords = [
+      "on",
+      "fragment",
+      "query",
+      "mutation",
+      "subscription",
+      "true",
+      "false"
+    ]
+    for keyword in nonKeywords.values() do
+      var fragmentName = keyword
+      // You can't define or reference a fragment named `on`.
+      if keyword == "on" then
+        fragmentName = "a"
+      end
+      let query = String().append(
+"""query ${keyword} {
+  ... ${fragmentName}
+  ... on ${keyword} { field }
+}
+fragment ${fragmentName} on Type {
+  ${keyword}(${keyword}: $${keyword}) @${keyword}(${keyword}: ${keyword})
+}""")
+        .replace("${keyword}", keyword)
+        .replace("${fragmentName}", fragmentName)
+      GraphQLParser(h.env).parse(query.clone())
     end
 
 class iso _TestParser is UnitTest
