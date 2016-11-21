@@ -18,6 +18,9 @@ actor Main is TestList
     test(_TestParsesKitchenSink)
     test(_TestAllowsNonKeywordsAnywhereANameIsAllowed)
     test(_TestParsesAnonymousMutationOperations)
+    test(_TestParsesAnonymousSubscriptionOperations)
+    test(_TestParsesNamedMutationOperations)
+    test(_TestParsesNamedSubscriptionOperations)
     test(_TestLexerAdvance)
     test(_TestLexer)
     test(_TestParser)
@@ -304,6 +307,33 @@ class iso _TestParsesAnonymousMutationOperations is UnitTest
     GraphQLParser(h.env).parse("""
       mutation {
         mutationField
+      }
+      """)
+
+class iso _TestParsesAnonymousSubscriptionOperations is UnitTest
+  fun name(): String => "parses anonymous subscription operations"
+  fun apply(h: TestHelper) ? =>
+    GraphQLParser(h.env).parse("""
+      subscription {
+        subscriptionField
+      }
+      """)
+
+class iso _TestParsesNamedMutationOperations is UnitTest
+  fun name(): String => "parses named mutation operations"
+  fun apply(h: TestHelper) ? =>
+    GraphQLParser(h.env).parse("""
+      mutation Foo {
+        mutationField
+      }
+      """)
+
+class iso _TestParsesNamedSubscriptionOperations is UnitTest
+  fun name(): String => "parses named subscription operations"
+  fun apply(h: TestHelper) ? =>
+    GraphQLParser(h.env).parse("""
+      subscription Foo {
+        subscriptionField
       }
       """)
 
