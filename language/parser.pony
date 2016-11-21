@@ -798,7 +798,7 @@ class GraphQLParser
     """
     expect(lexer, openKind)
     let nodes = Array[T]
-    while (not skip(lexer, closeKind)) do
+    while not skip(lexer, closeKind) do
       nodes.push(parseFn(this, lexer))
     end
     nodes

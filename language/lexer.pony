@@ -167,8 +167,9 @@ class GraphQLLexer
     """
     let col = _column - 1
     var is_float = false
-    var rune' = rune
     let number = String()
+
+    var rune' = rune
     number.push_utf32(rune')
     if (rune' == '-') then
       rune' = next_rune()
@@ -185,6 +186,7 @@ class GraphQLLexer
     else
       _read_digits(number)
     end
+
     rune' = next_rune()
     if (rune' == '.') then
       is_float = true
@@ -193,6 +195,7 @@ class GraphQLLexer
     else
       push_back(rune')
     end
+
     rune' = next_rune()
     if (rune' == 'E') or (rune' == 'e') then
       number.push_utf32(rune')
@@ -201,7 +204,10 @@ class GraphQLLexer
         number.push_utf32(rune')
         _read_digits(number)
       end
+    else
+      push_back(rune')
     end
+
     if is_float then
       Token(GraphQLFloat, number.clone(), _line, col)
     else

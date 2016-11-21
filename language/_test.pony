@@ -8,9 +8,16 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
+    test(_TestProvidesUsefulError)
+    test(_TestProvidesUsefulErrorWithSource)
+    test(_TestVariableInlineValues)
+    test(_TestConstantDefaultValues)
+    test(_TestDoesNotAcceptFragmentsNamedOn)
+    test(_TestDoesNotAcceptFragmentsSpreadOfOn)
+    test(_TestParsesMultibyteCharacters)
+    test(_TestParsesKitchenSink)
     test(_TestLexerAdvance)
     test(_TestLexer)
-    test(_TestProvidesUsefulError)
     test(_TestParser)
 
 class iso _TestLexerAdvance is UnitTest
@@ -19,6 +26,7 @@ class iso _TestLexerAdvance is UnitTest
     let env = h.env
     let lexer = GraphQLLexer(h.env, """
       query{
+         method(id: [1, 2])
          name,
          age
       }
@@ -115,6 +123,146 @@ fragment MissingOn Type
         expect,
         parser.err.string()
       )
+    end
+
+class iso _TestProvidesUsefulErrorWithSource is UnitTest
+  fun name(): String => "parse provides useful error when using source"
+  fun apply(h: TestHelper) =>
+    // TODO
+    None
+
+class iso _TestVariableInlineValues is UnitTest
+  fun name(): String => "parses variable inline values"
+  fun apply(h: TestHelper) ? =>
+    GraphQLParser(h.env).parse("{ field(complex: { a: { b: [ $var ] } }) }")
+
+class iso _TestConstantDefaultValues is UnitTest
+  fun name(): String => "parses constant default values"
+  fun apply(h: TestHelper) =>
+    let parser = GraphQLParser(h.env)
+    try
+      parser.parse(
+        "query Foo($x: Complex = { a: { b: [ $var ] } }) { field }")
+      h.fail("Should have raised an error")
+    else
+      h.assert_eq[String](
+        """Syntax Error GraphQL (1:37) Unexpected DOLLAR "$"""",
+        parser.err.string()
+      )
+    end
+
+class iso _TestDoesNotAcceptFragmentsNamedOn is UnitTest
+  fun name(): String => """does not accept fragments named "on""""
+  fun apply(h: TestHelper) =>
+    let parser = GraphQLParser(h.env)
+    try
+      parser.parse("fragment on on on { on }")
+      h.fail("Should have raised an error")
+    else
+      h.assert_eq[String](
+        """Syntax Error GraphQL (1:10) Unexpected NAME "on"""",
+        parser.err.string()
+      )
+    end
+
+class iso _TestDoesNotAcceptFragmentsSpreadOfOn is UnitTest
+  fun name(): String => """does not accept fragments spread of "on""""
+  fun apply(h: TestHelper) =>
+    let parser = GraphQLParser(h.env)
+    try
+      parser.parse("{ ...on }")
+      h.fail("Should have raised an error")
+    else
+      h.assert_eq[String](
+        """Syntax Error GraphQL (1:9) Expected NAME, found }""",
+        parser.err.string()
+      )
+    end
+
+class iso _TestParsesMultibyteCharacters is UnitTest
+  fun name(): String => "parses multi-byte characters"
+  fun apply(h: TestHelper) ? =>
+    let doc = GraphQLParser(h.env).parse("""
+      # This comment has a \u0A0A multi-byte character.
+      { field(arg: "Has a \u0A0A multi-byte character.") }
+      """)
+    h.assert_eq[USize](1, doc.definitions.size())
+    let ops = doc.definitions(0) as OperationDefinitionNode
+    h.assert_eq[USize](1, ops.selectionSet.selections.size())
+    let f = ops.selectionSet.selections(0) as FieldNode
+    let args = f.arguments as Array[ArgumentNode]
+    h.assert_eq[USize](1, args.size())
+    let v = args(0).value as StringValueNode
+    h.assert_eq[String]("StringValue", v.kind.string())
+    // TODO - below fails
+    // h.assert_eq[String]("Has a \u0A0A multi-byte character.", v.value)
+
+class iso _TestParsesKitchenSink is UnitTest
+  fun name(): String => "parses kitchen sink"
+  fun apply(h: TestHelper) =>
+    let parser = GraphQLParser(h.env)
+    try
+      parser.parse("""
+# Copyright (c) 2015, Facebook, Inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree. An additional grant
+# of patent rights can be found in the PATENTS file in the same directory.
+
+query queryName($foo: ComplexType, $site: Site = MOBILE) {
+  whoever123is: node(id: [123, 456]) {
+    id ,
+    ... on User @defer {
+      field2 {
+        id ,
+        alias: field1(first:10, after:$foo,) @include(if: $foo) {
+          id,
+          ...frag
+        }
+      }
+    }
+    ... @skip(unless: $foo) {
+      id
+    }
+    ... {
+      id
+    }
+  }
+}
+
+mutation likeStory {
+  like(story: 123) @defer {
+    story {
+      id
+    }
+  }
+}
+
+subscription StoryLikeSubscription($input: StoryLikeSubscribeInput) {
+  storyLikeSubscribe(input: $input) {
+    story {
+      likers {
+        count
+      }
+      likeSentence {
+        text
+      }
+    }
+  }
+}
+
+fragment frag on Friend {
+  foo(size: $size, bar: $b, obj: {key: "value"})
+}
+
+{
+  unnamed(truthy: true, falsey: false, nullish: null),
+  query
+}
+      """)
+    else
+      h.fail("Failed: " + parser.err.string())
     end
 
 class iso _TestParser is UnitTest
