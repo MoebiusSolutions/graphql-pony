@@ -760,8 +760,7 @@ class GraphQLParser
       lexer.advance()
       return token
     end
-    let msg =
-      String().append("Expected ")
+    let msg = String().append("Expected ")
         .append("\"").append(value).append("\"")
         .append(", found ").append(token.kind.string()).append(" ")
         .append("\"").append(token.value).append("\"")
@@ -776,10 +775,10 @@ class GraphQLParser
     let token' = match atToken
     | let t: Token => t
     else lexer.token() end
-    syntax_error(
-      "lexer.source", token'.line, token'.column,
-      "Unexpected " + token'.kind.string() + "=" + token'.value
-    )
+    let msg = String().append("Unexpected ")
+      .append(token'.kind.string()).append(" ")
+      .append("\"").append(token'.value).append("\"")
+    syntax_error("TODO", token'.line, token'.column, msg.clone())
 
   fun ref syntax_error(source': String, line: U32, column: U32, message: String) =>
     err = GraphQLError(source', line, column, message)

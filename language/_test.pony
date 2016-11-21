@@ -87,15 +87,32 @@ class iso _TestProvidesUsefulError is UnitTest
         h.fail("Failed to access item 0")
       end
     end
-    try
-      let document = parser.parse(
-"""{ ...MissingOn }
+
+    expect_error(h,
+      """{ ...MissingOn }
 fragment MissingOn Type
-""")
+      """,
+      """Syntax Error GraphQL (2:20) Expected "on", found NAME "Type""""
+    )
+    expect_error(h,
+      "{ field: {} }",
+      """Syntax Error GraphQL (1:10) Expected NAME, found {"""
+    )
+    expect_error(h,
+      "notanoperation Foo { field }",
+      """Syntax Error GraphQL (1:1) Unexpected NAME "notanoperation""""
+    )
+    expect_error(h, "...",
+      """Syntax Error GraphQL (1:1) Unexpected SPREAD "..."""")
+
+  fun expect_error(h: TestHelper, given: String, expect: String) =>
+    let parser = GraphQLParser(h.env)
+    try
+      let document = parser.parse(given)
       h.fail("Should have raised an error")
     else
       h.assert_eq[String](
-        """Syntax Error GraphQL (2:20) Expected "on", found NAME "Type"""",
+        expect,
         parser.err.string()
       )
     end

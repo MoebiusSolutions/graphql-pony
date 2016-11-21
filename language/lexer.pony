@@ -276,7 +276,7 @@ class GraphQLLexer
     """
     try
       _skip_whitespace()
-      let col = _column - 1
+      let col = _column
       let rune = next_rune()
       match rune
       | BANG.rune() => Token(BANG, "!", _line, col)

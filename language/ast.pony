@@ -20,15 +20,15 @@ primitive EQUALS fun rune(): U32 => '='
 primitive AT fun rune(): U32 => '@'
   fun string(): String => "AT"
 primitive BracketL fun rune(): U32 => '['
-  fun string(): String => "BracketL"
+  fun string(): String => "["
 primitive BracketR fun rune(): U32 => ']'
-  fun string(): String => "BracketR"
+  fun string(): String => "]"
 primitive BraceL fun rune(): U32 => '{'
-  fun string(): String => "BraceL"
+  fun string(): String => "{"
 primitive PIPE fun rune(): U32 => '|'
-  fun string(): String => "PIPE"
+  fun string(): String => "|"
 primitive BraceR fun rune(): U32 => '}'
-  fun string(): String => "BraceR"
+  fun string(): String => "}"
 primitive NAME
   fun string(): String => "NAME"
 primitive GraphQLInt
