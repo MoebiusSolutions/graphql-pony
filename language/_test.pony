@@ -79,6 +79,25 @@ class iso _TestProvidesUsefulError is UnitTest
         "Syntax Error GraphQL (1:2) Expected NAME, found EOF",
         parser.err.string()
       )
+      h.assert_eq[USize](1, parser.err.locations.size())
+      try
+        h.assert_eq[U32](1, parser.err.locations(0)._1)
+        h.assert_eq[U32](2, parser.err.locations(0)._2)
+      else
+        h.fail("Failed to access item 0")
+      end
+    end
+    try
+      let document = parser.parse(
+"""{ ...MissingOn }
+fragment MissingOn Type
+""")
+      h.fail("Should have raised an error")
+    else
+      h.assert_eq[String](
+        """Syntax Error GraphQL (2:20) Expected "on", found NAME "Type"""",
+        parser.err.string()
+      )
     end
 
 class iso _TestParser is UnitTest

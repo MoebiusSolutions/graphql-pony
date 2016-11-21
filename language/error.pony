@@ -49,9 +49,14 @@ class GraphQLError
    */
   // let positions: Array[U32]
 
-  new create(source': String, line: U32, message': String) =>
+  new create(
+    source': String,
+    line: U32,
+    column: U32,
+    message': String
+  ) =>
     source = source'
-    locations.push((line, 1))
+    locations.push((line, column))
     message = message'
 
   fun string(): String =>
@@ -61,5 +66,5 @@ class GraphQLError
       (0,0)
     end
     "Syntax Error GraphQL ("
-      + (1+loc._1).string() +":"+ (1+loc._2).string()
+      + loc._1.string() +":"+ loc._2.string()
     +") " + message

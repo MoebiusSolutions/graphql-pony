@@ -49,14 +49,25 @@ class val Token
   """
   Immutable token lexed from input
   """
+  // The kind of Token.
   let kind : TokenKind val
+  // For non-punctuation tokens, represents the interpreted value of the token.
   let value : String val
+  // The 1-indexed line number on which this Token appears.
   let line : U32 val
+  // The 1-indexed column number at which this Token begins.
+  let column: U32 val
 
-  new val create(kind': TokenKind, value': String, line': U32) =>
+  new val create(
+    kind': TokenKind,
+    value': String,
+    line': U32,
+    column': U32
+  ) =>
     kind = kind'
     value = value'
     line = line'
+    column = column'
 
 class Location
   """

@@ -1,6 +1,6 @@
 class GraphQLParser
   let env: Env
-  var err: GraphQLError = GraphQLError("", 0, "Unknown error")
+  var err: GraphQLError = GraphQLError("", 0, 0, "Unknown error")
 
   new create(env': Env) =>
     env = env'
@@ -26,56 +26,6 @@ class GraphQLParser
       definitions.push(parse_definition(lexer))
     until skip(lexer, EOF) end
     DocumentNode(loc(lexer, start), definitions)
-
-  fun ref expect(lexer: GraphQLLexer, kind: TokenKind): Token ? =>
-    """
-    If the next token is of the given kind, return that token after advancing
-    the lexer. Otherwise, do not change the parser state and throw an error.
-    """
-    let token' = lexer.token()
-    if token'.kind is kind then
-      lexer.advance()
-      return token'
-    end
-    syntax_error(
-      "TODO",
-      token'.line,
-      "Expected "+ kind.string() +", found "+ token'.kind.string()
-    )
-    error
-
-  fun ref expect_keyword(lexer: GraphQLLexer, value: String): Token ? =>
-    """
-    If the next token is a keyword with the given value, return that token after
-    advancing the lexer. Otherwise, do not change the parser state and return
-    false.
-    """
-    let token = lexer.token()
-    if (token.kind is NAME) and (token.value == value) then
-      lexer.advance()
-      return token
-    end
-    syntax_error("TODO", token.line,
-      "Expected "+ value +", found "+ token.kind.string())
-    error
-
-  fun ref unexpected(lexer: GraphQLLexer, atToken: (Token|None) = None) =>
-    """
-    Helper function for creating an error when an unexpected lexed token
-    is encountered.
-    """
-    let token' = match atToken
-    | let t: Token => t
-    else lexer.token() end
-    syntax_error(
-      "lexer.source",
-      token'.line,
-      "Unexpected " + token'.kind.string() + "=" + token'.value
-    )
-
-  fun ref syntax_error(source': String, line: U32, message: String) =>
-    err = GraphQLError(source', line, message)
-    None
 
   fun ref parse_definition(lexer: GraphQLLexer): DefinitionNode ? =>
     """
@@ -780,6 +730,60 @@ class GraphQLParser
 
   fun loc(lexer: GraphQLLexer, kind: Token): Location =>
     Location(0, 0, kind, kind, Source("TODO", "TODO"))
+
+  fun ref expect(lexer: GraphQLLexer, kind: TokenKind): Token ? =>
+    """
+    If the next token is of the given kind, return that token after advancing
+    the lexer. Otherwise, do not change the parser state and throw an error.
+    """
+    let token' = lexer.token()
+    if token'.kind is kind then
+      lexer.advance()
+      return token'
+    end
+    syntax_error(
+      "TODO",
+      token'.line,
+      token'.column,
+      "Expected "+ kind.string() +", found "+ token'.kind.string()
+    )
+    error
+
+  fun ref expect_keyword(lexer: GraphQLLexer, value: String): Token ? =>
+    """
+    If the next token is a keyword with the given value, return that token after
+    advancing the lexer. Otherwise, do not change the parser state and return
+    false.
+    """
+    let token = lexer.token()
+    if (token.kind is NAME) and (token.value == value) then
+      lexer.advance()
+      return token
+    end
+    let msg =
+      String().append("Expected ")
+        .append("\"").append(value).append("\"")
+        .append(", found ").append(token.kind.string()).append(" ")
+        .append("\"").append(token.value).append("\"")
+    syntax_error("TODO", token.line, token.column, msg.clone())
+    error
+
+  fun ref unexpected(lexer: GraphQLLexer, atToken: (Token|None) = None) =>
+    """
+    Helper function for creating an error when an unexpected lexed token
+    is encountered.
+    """
+    let token' = match atToken
+    | let t: Token => t
+    else lexer.token() end
+    syntax_error(
+      "lexer.source", token'.line, token'.column,
+      "Unexpected " + token'.kind.string() + "=" + token'.value
+    )
+
+  fun ref syntax_error(source': String, line: U32, column: U32, message: String) =>
+    err = GraphQLError(source', line, column, message)
+    None
 
   fun ref any[T: ASTNode](
     lexer: GraphQLLexer,
