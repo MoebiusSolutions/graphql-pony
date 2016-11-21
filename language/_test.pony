@@ -17,6 +17,7 @@ actor Main is TestList
     test(_TestParsesMultibyteCharacters)
     test(_TestParsesKitchenSink)
     test(_TestAllowsNonKeywordsAnywhereANameIsAllowed)
+    test(_TestParsesAnonymousMutationOperations)
     test(_TestLexerAdvance)
     test(_TestLexer)
     test(_TestParser)
@@ -296,6 +297,15 @@ fragment ${fragmentName} on Type {
         .replace("${fragmentName}", fragmentName)
       GraphQLParser(h.env).parse(query.clone())
     end
+
+class iso _TestParsesAnonymousMutationOperations is UnitTest
+  fun name(): String => "parses anonymous mutation operations"
+  fun apply(h: TestHelper) ? =>
+    GraphQLParser(h.env).parse("""
+      mutation {
+        mutationField
+      }
+      """)
 
 class iso _TestParser is UnitTest
   fun name(): String => "parser"
