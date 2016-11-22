@@ -45,6 +45,23 @@ type TokenKind is (SOF | EOF | BANG | DOLLAR | ParenL | ParenR
   | BraceL | PIPE | BraceR | NAME | GraphQLInt | GraphQLFloat | GraphQLString
   | COMMENT )
 
+class ArrayToString
+  fun string[T: Stringable #read](a': (Array[T] box|None)): String iso^ =>
+    match a'
+    | let a: Array[T] box =>
+      var sep = ""
+      let s = String().append("[")
+      for e in a.values() do
+        s.append(sep)
+        s.append(e.string())
+        sep = ","
+      end
+      s.append("]")
+      s.clone()
+    else
+      "None".clone()
+    end
+
 class val Token
   """
   Immutable token lexed from input
@@ -165,10 +182,15 @@ class NameNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    let s = String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append("\"").append(value)
+      .append("}")
+    s.clone()
 
 // Document
 class DocumentNode is (Equatable[DocumentNode] & Stringable)
+  let atos: ArrayToString = ArrayToString
   let kind : String = "Document"
   let loc: (Location|None)
   let definitions: Array[DefinitionNode]
@@ -176,11 +198,10 @@ class DocumentNode is (Equatable[DocumentNode] & Stringable)
     loc = loc'
     definitions = definitions'
   fun string(): String iso^ =>
-    let s = String().append(kind).append("[")
-    for d in definitions.values() do
-      s.append(d.string()).append(" ")
-    end
-    s.append("]")
+    let s = String().append(kind).append("{\n")
+    s.append(" loc:").append(loc.string()).append("\n")
+    s.append(" definitions:").append(atos.string[DefinitionNode](definitions)).append("\n")
+    s.append("\n}")
     s.clone()
 
 type DefinitionNode is
@@ -190,6 +211,7 @@ type DefinitionNode is
   )
 
 class OperationDefinitionNode
+  let atos: ArrayToString = ArrayToString
   let kind: String = "OperationDefinition"
   let loc: (Location|None)
   let operation: OperationTypeNode
@@ -212,13 +234,23 @@ class OperationDefinitionNode
     directives = directives'
     selectionSet = selectionSet'
   fun string(): String iso^ =>
-    let s = String().append(kind).append(":").append(selectionSet.string())
+    let s = String().append(kind).append("{\n")
+      .append("loc:").append(loc.string()).append("\n")
+      .append("operation:").append(operation.string()).append("\n")
+      .append("name:").append(name.string()).append("\n")
+      .append("variableDefinitions:").append(atos.string[VariableDefinitionNode](variableDefinitions)).append("\n")
+      .append("directives:").append(atos.string[DirectiveNode](directives)).append("\n")
+      .append("selectionSet:").append(selectionSet.string()).append("\n")
+      .append("\n}")
     s.clone()
 
 // Note: subscription is an experimental non-spec addition.
 primitive TnQuery
+  fun string(): String => "query"
 primitive TnMutation
+  fun string(): String => "mutation"
 primitive TnSubscription
+  fun string(): String => "subscript"
 type OperationTypeNode is (TnQuery | TnMutation | TnSubscription)
 
 class VariableDefinitionNode
@@ -256,10 +288,11 @@ class SelectionSetNode is Stringable
     loc = loc'
     selections = selections'
   fun string(): String iso^ =>
-    let s = String().append(kind).append(":")
+    let s = String().append(kind).append(loc.string()).append("[\n")
     for n in selections.values() do
-      s.append(n.string())
+      s.append("  ").append(n.string()).append("\n")
     end
+    s.append(" ]")
     s.clone()
 
 type SelectionNode is
@@ -269,6 +302,7 @@ type SelectionNode is
   )
 
 class FieldNode
+  let atos: ArrayToString = ArrayToString
   let kind: String = "Field"
   let loc: (Location|None)
   let alias: (NameNode|None)
@@ -291,9 +325,18 @@ class FieldNode
     directives = directives'
     selectionSet = selectionSet'
   fun string(): String iso^ =>
-    kind.clone()
+    let s = String()
+    s.append(kind).append("{")
+      .append(loc.string())
+      .append("alias:").append(alias.string()).append(",")
+      .append("name:").append(name.string()).append(",")
+      .append("arguments:").append(atos.string[ArgumentNode](arguments)).append(",")
+      .append("directives").append(atos.string[DirectiveNode](directives)).append(",")
+      .append("selectionSet:").append(selectionSet.string())
+      .append("}")
+    s.clone()
 
-class ArgumentNode
+class ArgumentNode is Stringable
   let kind: String = "Argument"
   let loc: (Location|None)
   let name: NameNode
@@ -303,7 +346,12 @@ class ArgumentNode
     name = name'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    let s = String().append(kind).append("{\n    ")
+      .append("loc:").append(loc.string()).append(",")
+      .append("name:").append(name.string()).append(",")
+      .append("value:").append(value.string())
+      .append("}")
+    s.clone()
 
 // Fragments
 class FragmentSpreadNode
@@ -384,7 +432,10 @@ class IntValueNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(value)
+      .append("}").clone()
 
 class FloatValueNode
   let kind: String = "FloatValue"

@@ -351,84 +351,61 @@ class iso _TestItCreatesAst is UnitTest
     """
 
     let result = GraphQLParser(h.env).parse(source)
-    let expect = DocumentNode(
-      Location(0, 41),
-      Array[DefinitionNode].push(
+    let expect = DocumentNode(where
+      loc' = Location(0, 0),
+      definitions' = Array[DefinitionNode].push(
         OperationDefinitionNode(where
-          loc' = Location(0, 40),
+          loc' = Location(1, 1),
           operation' = TnQuery,
           name' = None,
           variableDefinitions' = None,
           directives' = None,
           selectionSet' = SelectionSetNode(
-            Location(0, 40),
-            Array[SelectionNode]
+            Location(1, 1),
+            Array[SelectionNode].push(
+              FieldNode(where
+                loc' = Location(2,3),
+                alias' = None,
+                name' = NameNode(Location(2,3), "node"),
+                arguments' = Array[ArgumentNode].push(
+                  ArgumentNode(where
+                    loc' = Location(2,8),
+                    name' = NameNode(Location(2,8), "id"),
+                    value' = IntValueNode(Location(2,12), "4")
+                  )
+                ),
+                directives' = Array[DirectiveNode],
+                selectionSet' = SelectionSetNode(where
+                  loc' = Location(2,15),
+                  selections' = Array[SelectionNode].push(
+                    FieldNode(where
+                      loc' = Location(3,5),
+                      alias' = None,
+                      name' = NameNode(Location(3,5), "id"),
+                      arguments' = Array[ArgumentNode],
+                      directives' = Array[DirectiveNode],
+                      selectionSet' = None
+                    )
+                  ).push(
+                    FieldNode(where
+                      loc' = Location(4,5),
+                      alias' = None,
+                      name' = NameNode(Location(4,5), "name"),
+                      arguments' = Array[ArgumentNode],
+                      directives' = Array[DirectiveNode],
+                      selectionSet' = None
+                    )
+                  )
+                )
+              )
+            )
           )
         )
       )
     )
-    h.assert_eq[DocumentNode](expect, result)
-/*
-  expect(result).to.containSubset(
-    { kind: Kind.DOCUMENT,
-      loc: { start: 0, end: 41 },
-      definitions:
-      [ { kind: Kind.OPERATION_DEFINITION,
-        loc: { start: 0, end: 40 },
-        operation: 'query',
-        name: null,
-        variableDefinitions: null,
-        directives: [],
-        selectionSet:
-        { kind: Kind.SELECTION_SET,
-          loc: { start: 0, end: 40 },
-          selections:
-          [ { kind: Kind.FIELD,
-            loc: { start: 4, end: 38 },
-            alias: null,
-            name:
-            { kind: Kind.NAME,
-              loc: { start: 4, end: 8 },
-              value: 'node' },
-            arguments:
-            [ { kind: Kind.ARGUMENT,
-              name:
-              { kind: Kind.NAME,
-                loc: { start: 9, end: 11 },
-                value: 'id' },
-              value:
-              { kind: Kind.INT,
-                loc: { start: 13, end: 14 },
-                value: '4' },
-              loc: { start: 9, end: 14 } } ],
-            directives: [],
-            selectionSet:
-            { kind: Kind.SELECTION_SET,
-              loc: { start: 16, end: 38 },
-              selections:
-              [ { kind: Kind.FIELD,
-                loc: { start: 22, end: 24 },
-                alias: null,
-                name:
-                { kind: Kind.NAME,
-                  loc: { start: 22, end: 24 },
-                  value: 'id' },
-                arguments: [],
-                directives: [],
-                selectionSet: null },
-              { kind: Kind.FIELD,
-                loc: { start: 30, end: 34 },
-                alias: null,
-                name:
-                { kind: Kind.NAME,
-                  loc: { start: 30, end: 34 },
-                  value: 'name' },
-                arguments: [],
-                directives: [],
-                selectionSet: null } ] } } ] } } ] }
-  );
-});
-*/
+    let expect': String = expect.string()
+    let result': String = result.string()
+    h.assert_eq[String](expect', result')
 
 class iso _TestParser is UnitTest
   fun name(): String => "parser"

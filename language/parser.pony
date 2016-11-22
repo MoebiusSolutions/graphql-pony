@@ -728,8 +728,9 @@ class GraphQLParser
     end
     match'
 
-  fun loc(lexer: GraphQLLexer, kind: Token): Location =>
-    Location(0, 0, kind, kind, Source("TODO", "TODO"))
+  fun loc(lexer: GraphQLLexer, token: Token): Location =>
+    Location(token.line, token.column, 
+      token, token, Source("TODO", "TODO"))
 
   fun ref expect(lexer: GraphQLLexer, kind: TokenKind): Token ? =>
     """
