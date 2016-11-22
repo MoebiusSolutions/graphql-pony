@@ -22,6 +22,9 @@ actor Main is TestList
     test(_TestParsesNamedMutationOperations)
     test(_TestParsesNamedSubscriptionOperations)
     test(_TestItCreatesAst)
+    test(_TestAllowsParsingWithoutSourceLocationInformation)
+    test(_TestParsesNullValue)
+    test(_TestParsesListValue)
     test(_TestLexerAdvance)
     test(_TestLexer)
     test(_TestParser)
@@ -406,6 +409,54 @@ class iso _TestItCreatesAst is UnitTest
     let expect': String = expect.string()
     let result': String = result.string()
     h.assert_eq[String](expect', result')
+
+class iso _TestAllowsParsingWithoutSourceLocationInformation is UnitTest
+  fun name(): String => "allows parsing without source location information"
+  fun apply(h: TestHelper) ? =>
+    // let source = new Source("{ id }");
+    // let result = parse(source, { noLocation: true });
+    GraphQLParser(h.env).parse("{ id }")
+    // TODO
+
+class iso _TestParsesNullValue is UnitTest
+  fun name(): String => "parses null value"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_value("null")
+      h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+    else
+      h.env.out.print(parser.err.string())
+      error
+    end
+
+class iso _TestParsesListValue is UnitTest
+  fun name(): String => "parses list value"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_value("""[123 "abc"]""")
+      let e = ListValueNode(where
+        loc' = Location(1,1),
+        values' = Array[ValueNode].push(
+          IntValueNode(where
+            loc' = Location(1,2),
+            value' = "123")
+        ).push(
+          StringValueNode(where
+            loc' = Location(1,6),
+            value' = "abc"
+          )
+        )
+      )
+      let e': String = e.string()
+      let v': String = v.string()
+      h.assert_eq[String](e', v')
+      // TODO: h.assert_eq[ListValueNode](e, v)
+    else
+      h.env.out.print(parser.err.string())
+      error
+    end
 
 class iso _TestParser is UnitTest
   fun name(): String => "parser"

@@ -13,6 +13,40 @@ class GraphQLParser
     let lexer = GraphQLLexer(env, source')
     parse_document(lexer)
 
+  fun ref parse_value(source': String): ValueNode ? =>
+    """
+    Given a string containing a GraphQL value (ex. `[42]`), parse the AST for
+    that value.
+    Throws GraphQLError if a syntax error is encountered.
+
+    This is useful within tools that operate upon GraphQL Values directly and
+    in isolation of complete GraphQL documents.
+
+    Consider providing the results to the utility function: valueFromAST().
+    """
+    let lexer = GraphQLLexer(env, source')
+    expect(lexer, SOF)
+    let value = parse_value_literal(lexer, false)
+    expect(lexer, EOF)
+    value
+
+  fun ref parse_type(source': String): TypeNode ? =>
+    """
+    Given a string containing a GraphQL Type (ex. `[Int!]`), parse the AST for
+    that type.
+    Throws GraphQLError if a syntax error is encountered.
+
+    This is useful within tools that operate upon GraphQL Types directly and
+    in isolation of complete GraphQL documents.
+
+    Consider providing the results to the utility function: typeFromAST().
+    """
+    let lexer = GraphQLLexer(env, source')
+    expect(lexer, SOF)
+    let type' = parse_type_reference(lexer)
+    expect(lexer, EOF)
+    type'
+
   // Implements the parsing rules in the Document section.
 
   fun ref parse_document(lexer: GraphQLLexer): DocumentNode ? =>
@@ -729,7 +763,7 @@ class GraphQLParser
     match'
 
   fun loc(lexer: GraphQLLexer, token: Token): Location =>
-    Location(token.line, token.column, 
+    Location(token.line, token.column,
       token, token, Source("TODO", "TODO"))
 
   fun ref expect(lexer: GraphQLLexer, kind: TokenKind): Token ? =>

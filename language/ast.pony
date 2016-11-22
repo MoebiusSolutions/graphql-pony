@@ -86,7 +86,7 @@ class val Token
     line = line'
     column = column'
 
-class Location
+class Location is Equatable[Location]
   """
   Contains a range of UTF-8 character offsets and token references that
   identify the region of the source from which the AST derived.
@@ -129,6 +129,9 @@ class Location
       String().append("(").append(startOff.string())
         .append(",").append(endOff.string()).append(")")
     end
+  fun eq(that: box->Location): Bool =>
+    (this.startOff == that.startOff) and
+    (this.endOff == that.endOff)
 
 /**
  * The list of all possible AST node types.
@@ -270,7 +273,7 @@ class VariableDefinitionNode
   fun string(): String iso^ =>
     kind.clone()
 
-class VariableNode
+class VariableNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "Variable"
   let loc: (Location|None)
   let name: NameNode
@@ -424,7 +427,7 @@ type ValueNode is
   | ObjectValueNode
   )
 
-class IntValueNode
+class IntValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "IntValue"
   let loc: (Location|None)
   let value: String
@@ -437,7 +440,7 @@ class IntValueNode
       .append("value:").append(value)
       .append("}").clone()
 
-class FloatValueNode
+class FloatValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "FloatValue"
   let loc: (Location|None)
   let value: String
@@ -445,9 +448,12 @@ class FloatValueNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(value)
+      .append("}").clone()
 
-class StringValueNode
+class StringValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "StringValue"
   let loc: (Location|None)
   let value: String
@@ -455,9 +461,12 @@ class StringValueNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(value)
+      .append("}").clone()
 
-class BooleanValueNode
+class BooleanValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "BooleanValue"
   let loc: (Location|None)
   let value: Bool
@@ -465,17 +474,33 @@ class BooleanValueNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(value.string())
+      .append("}").clone()
 
-class NullValueNode
+class NullValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "NullValue"
   let loc: (Location|None)
   new create(loc': Location) =>
     loc = loc'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{").append(loc.string()).append("}").clone()
+  fun eq(that': box->ValueNode): Bool =>
+    match that'
+    | let that: NullValueNode box =>
+      (this.kind == that.kind) and
+      match (this.loc, that.loc)
+      | (None, None) => true
+      | (let l: Location box, let r: Location box) => l == r
+      else
+        false
+      end
+    else
+      false
+    end
 
-class EnumValueNode
+class EnumValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "EnumValue"
   let loc: (Location|None)
   let value: String
@@ -483,9 +508,13 @@ class EnumValueNode
     loc = loc'
     value = value'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(value)
+      .append("}").clone()
 
-class ListValueNode
+class ListValueNode is (Equatable[ValueNode] & Stringable)
+  let atos: ArrayToString = ArrayToString
   let kind: String = "ListValue"
   let loc: (Location|None)
   let values: Array[ValueNode]
@@ -493,9 +522,13 @@ class ListValueNode
     loc = loc'
     values = values'
   fun string(): String iso^ =>
-    kind.clone()
+    String().append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("value:").append(atos.string[ValueNode](values))
+      .append("}").clone()
 
-class ObjectValueNode
+class ObjectValueNode is (Equatable[ValueNode] & Stringable)
+  let atos: ArrayToString = ArrayToString
   let kind: String = "ObjectValue"
   let loc: (Location|None)
   let fields: Array[ObjectFieldNode]
@@ -503,7 +536,11 @@ class ObjectValueNode
     loc = loc'
     fields = fields'
   fun string(): String iso^ =>
-    kind.clone()
+    String()
+      .append(kind).append("{")
+      .append("loc:").append(loc.string()).append(",")
+      .append("fields:").append(atos.string[ObjectFieldNode](fields))
+      .append("}").clone()
 
 class ObjectFieldNode
   let kind: String = "ObjectField"
