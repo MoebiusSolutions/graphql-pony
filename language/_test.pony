@@ -17,6 +17,10 @@ actor Main is TestList
     test(_TestParser)
 
   fun tag describe_parser(test: PonyTest) =>
+    test(object iso is UnitTest
+      fun name(): String => "Describe: GraphQLParser ----"
+      fun apply(h: TestHelper) => None
+    end)
     test(_TestProvidesUsefulError)
     test(_TestProvidesUsefulErrorWithSource)
     test(_TestVariableInlineValues)
@@ -33,11 +37,58 @@ actor Main is TestList
     test(_TestItCreatesAst)
     test(_TestAllowsParsingWithoutSourceLocationInformation)
 
+  // Example of inline tests
   fun tag describe_parse_value(test: PonyTest) =>
-    test(_TestParsesNullValue)
-    test(_TestParsesListValue)
+    test(object iso is UnitTest
+      fun name(): String => "Describe: parse_value ----"
+      fun apply(h: TestHelper) => None
+    end)
+    test(object iso is UnitTest
+      fun name(): String => "parses null value"
+      fun apply(h: TestHelper) ? =>
+        let parser = GraphQLParser(h.env)
+        try
+          let v = parser.parse_value("null")
+          h.assert_eq[ValueNode](NullValueNode(Location(0,4)), v)
+        else
+          h.env.out.print(parser.err.string())
+          error
+        end
+    end)
+    test(object iso is UnitTest
+      fun name(): String => "parses list value"
+      fun apply(h: TestHelper) ? =>
+        let parser = GraphQLParser(h.env)
+        try
+          let v = parser.parse_value("""[123 "abc"]""")
+          let e = ListValueNode(where
+            loc' = Location(0,11),
+            values' = Array[ValueNode].push(
+              IntValueNode(where
+                loc' = Location(1,4),
+                value' = "123")
+            ).push(
+              StringValueNode(where
+                loc' = Location(5,10),
+                value' = "abc"
+              )
+            )
+          )
+          let e': String = e.string()
+          let v': String = v.string()
+          h.assert_eq[String](e', v')
+          // TODO: h.assert_eq[ListValueNode](e, v)
+        else
+          h.env.out.print(parser.err.string())
+          error
+        end
+    end)
 
   fun tag describe_parse_type(test: PonyTest) =>
+    test(object iso is UnitTest
+      fun name(): String => "Describe: parse_type ----"
+      fun apply(h: TestHelper) => None
+    end)
     test(_TestParsesWellKnownTypes)
     test(_TestParsesCustomTypes)
     test(_TestParsesListTypes)
@@ -451,46 +502,6 @@ class iso _TestAllowsParsingWithoutSourceLocationInformation is UnitTest
     // let result = parse(source, { noLocation: true });
     GraphQLParser(h.env).parse("{ id }")
     // TODO
-
-class iso _TestParsesNullValue is UnitTest
-  fun name(): String => "parses null value"
-  fun apply(h: TestHelper) ? =>
-    let parser = GraphQLParser(h.env)
-    try
-      let v = parser.parse_value("null")
-      h.assert_eq[ValueNode](NullValueNode(Location(0,4)), v)
-    else
-      h.env.out.print(parser.err.string())
-      error
-    end
-
-class iso _TestParsesListValue is UnitTest
-  fun name(): String => "parses list value"
-  fun apply(h: TestHelper) ? =>
-    let parser = GraphQLParser(h.env)
-    try
-      let v = parser.parse_value("""[123 "abc"]""")
-      let e = ListValueNode(where
-        loc' = Location(0,11),
-        values' = Array[ValueNode].push(
-          IntValueNode(where
-            loc' = Location(1,4),
-            value' = "123")
-        ).push(
-          StringValueNode(where
-            loc' = Location(5,10),
-            value' = "abc"
-          )
-        )
-      )
-      let e': String = e.string()
-      let v': String = v.string()
-      h.assert_eq[String](e', v')
-      // TODO: h.assert_eq[ListValueNode](e, v)
-    else
-      h.env.out.print(parser.err.string())
-      error
-    end
 
 class iso _TestParsesWellKnownTypes is UnitTest
   fun name(): String => "parses well known types"
