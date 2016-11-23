@@ -8,6 +8,15 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
+    describe_parser(test)
+    describe_parse_value(test)
+    describe_parse_type(test)
+
+    test(_TestLexerAdvance)
+    test(_TestLexer)
+    test(_TestParser)
+
+  fun tag describe_parser(test: PonyTest) =>
     test(_TestProvidesUsefulError)
     test(_TestProvidesUsefulErrorWithSource)
     test(_TestVariableInlineValues)
@@ -23,11 +32,18 @@ actor Main is TestList
     test(_TestParsesNamedSubscriptionOperations)
     test(_TestItCreatesAst)
     test(_TestAllowsParsingWithoutSourceLocationInformation)
+
+  fun tag describe_parse_value(test: PonyTest) =>
     test(_TestParsesNullValue)
     test(_TestParsesListValue)
-    test(_TestLexerAdvance)
-    test(_TestLexer)
-    test(_TestParser)
+
+  fun tag describe_parse_type(test: PonyTest) =>
+    test(_TestParsesWellKnownTypes)
+    test(_TestParsesCustomTypes)
+    test(_TestParsesListTypes)
+    test(_TestParsesNonNullTypes)
+    test(_TestParsesNestedTypes)
+
 
 class iso _TestLexerAdvance is UnitTest
   fun name(): String => "lexer advance"
@@ -82,6 +98,24 @@ class iso _TestLexer is UnitTest
           + token.value + " "
           + token.line.string())
       end
+    end
+
+class iso _TestParser is UnitTest
+  fun name(): String => "parser"
+  fun apply(h: TestHelper) =>
+    let query = """
+      query FetchLukeAliased {
+        luke: human(id: "1000") {
+          name
+        }
+      }
+      """
+    let parser = GraphQLParser(h.env)
+    try
+      let document = parser.parse(query)
+      h.assert_eq[String]("Document", document.kind)
+    else
+      h.env.out.print(parser.err.string())
     end
 
 class iso _TestProvidesUsefulError is UnitTest
@@ -355,45 +389,45 @@ class iso _TestItCreatesAst is UnitTest
 
     let result = GraphQLParser(h.env).parse(source)
     let expect = DocumentNode(where
-      loc' = Location(0, 0),
+      loc' = Location(0, 41),
       definitions' = Array[DefinitionNode].push(
         OperationDefinitionNode(where
-          loc' = Location(1, 1),
+          loc' = Location(0, 40),
           operation' = TnQuery,
           name' = None,
           variableDefinitions' = None,
           directives' = None,
           selectionSet' = SelectionSetNode(
-            Location(1, 1),
+            Location(0, 40),
             Array[SelectionNode].push(
               FieldNode(where
-                loc' = Location(2,3),
+                loc' = Location(4,38),
                 alias' = None,
-                name' = NameNode(Location(2,3), "node"),
+                name' = NameNode(Location(4,8), "node"),
                 arguments' = Array[ArgumentNode].push(
                   ArgumentNode(where
-                    loc' = Location(2,8),
-                    name' = NameNode(Location(2,8), "id"),
-                    value' = IntValueNode(Location(2,12), "4")
+                    loc' = Location(9,14),
+                    name' = NameNode(Location(9,11), "id"),
+                    value' = IntValueNode(Location(13,14), "4")
                   )
                 ),
                 directives' = Array[DirectiveNode],
                 selectionSet' = SelectionSetNode(where
-                  loc' = Location(2,15),
+                  loc' = Location(16,38),
                   selections' = Array[SelectionNode].push(
                     FieldNode(where
-                      loc' = Location(3,5),
+                      loc' = Location(22,24),
                       alias' = None,
-                      name' = NameNode(Location(3,5), "id"),
+                      name' = NameNode(Location(22,24), "id"),
                       arguments' = Array[ArgumentNode],
                       directives' = Array[DirectiveNode],
                       selectionSet' = None
                     )
                   ).push(
                     FieldNode(where
-                      loc' = Location(4,5),
+                      loc' = Location(30,34),
                       alias' = None,
-                      name' = NameNode(Location(4,5), "name"),
+                      name' = NameNode(Location(30,34), "name"),
                       arguments' = Array[ArgumentNode],
                       directives' = Array[DirectiveNode],
                       selectionSet' = None
@@ -424,7 +458,7 @@ class iso _TestParsesNullValue is UnitTest
     let parser = GraphQLParser(h.env)
     try
       let v = parser.parse_value("null")
-      h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+      h.assert_eq[ValueNode](NullValueNode(Location(0,4)), v)
     else
       h.env.out.print(parser.err.string())
       error
@@ -437,14 +471,14 @@ class iso _TestParsesListValue is UnitTest
     try
       let v = parser.parse_value("""[123 "abc"]""")
       let e = ListValueNode(where
-        loc' = Location(1,1),
+        loc' = Location(0,11),
         values' = Array[ValueNode].push(
           IntValueNode(where
-            loc' = Location(1,2),
+            loc' = Location(1,4),
             value' = "123")
         ).push(
           StringValueNode(where
-            loc' = Location(1,6),
+            loc' = Location(5,10),
             value' = "abc"
           )
         )
@@ -458,20 +492,62 @@ class iso _TestParsesListValue is UnitTest
       error
     end
 
-class iso _TestParser is UnitTest
-  fun name(): String => "parser"
-  fun apply(h: TestHelper) =>
-    let query = """
-      query FetchLukeAliased {
-        luke: human(id: "1000") {
-          name
-        }
-      }
-      """
+class iso _TestParsesWellKnownTypes is UnitTest
+  fun name(): String => "parses well known types"
+  fun apply(h: TestHelper) ? =>
     let parser = GraphQLParser(h.env)
     try
-      let document = parser.parse(query)
-      h.assert_eq[String]("Document", document.kind)
+      let v = parser.parse_type("String")
+      // h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
     else
       h.env.out.print(parser.err.string())
+      error
+    end
+
+class iso _TestParsesCustomTypes is UnitTest
+  fun name(): String => "parses custom types"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_type("MyType")
+      // h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+    else
+      h.env.out.print(parser.err.string())
+      error
+    end
+
+class iso _TestParsesListTypes is UnitTest
+  fun name(): String => "parses list types"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_type("[MyType]")
+      // h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+    else
+      h.env.out.print(parser.err.string())
+      error
+    end
+
+class iso _TestParsesNonNullTypes is UnitTest
+  fun name(): String => "parses non-null types"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_type("MyType!")
+      // h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+    else
+      h.env.out.print(parser.err.string())
+      error
+    end
+
+class iso _TestParsesNestedTypes is UnitTest
+  fun name(): String => "parses nested types"
+  fun apply(h: TestHelper) ? =>
+    let parser = GraphQLParser(h.env)
+    try
+      let v = parser.parse_type("[MyType!]")
+      // h.assert_eq[ValueNode](NullValueNode(Location(1,1)), v)
+    else
+      h.env.out.print(parser.err.string())
+      error
     end

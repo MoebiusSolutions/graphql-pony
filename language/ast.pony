@@ -70,6 +70,10 @@ class val Token
   let kind : TokenKind val
   // For non-punctuation tokens, represents the interpreted value of the token.
   let value : String val
+  // The character offset at which this Node begins.
+  let startOffset: U32
+  // The character offset at which this Node ends.
+  let endOffset: U32
   // The 1-indexed line number on which this Token appears.
   let line : U32 val
   // The 1-indexed column number at which this Token begins.
@@ -78,13 +82,24 @@ class val Token
   new val create(
     kind': TokenKind,
     value': String,
+    startOffset': U32,
+    endOffset': U32,
     line': U32,
     column': U32
   ) =>
     kind = kind'
     value = value'
+    startOffset = startOffset'
+    endOffset = endOffset'
     line = line'
     column = column'
+  fun eq(that: box->Token): Bool =>
+    (this.kind is that.kind) and
+    (this.value == that.value) and
+    (this.startOffset == that.startOffset) and
+    (this.endOffset == that.endOffset) and
+    (this.line == that.line) and
+    (this.column == that.column)
 
 class Location is Equatable[Location]
   """
@@ -94,11 +109,11 @@ class Location is Equatable[Location]
   /**
    * The character offset at which this Node begins.
    */
-  let startOff: U32
+  let startOffset: U32
   /**
    * The character offset at which this Node ends.
    */
-  let endOff: U32
+  let endOffset: U32
   /**
    * The Token at which this Node begins.
    */
@@ -113,25 +128,28 @@ class Location is Equatable[Location]
   let source: (Source|None)
 
   new create(
-    startOff': U32,
-    endOff': U32,
+    startOffset': U32 = 0,
+    endOffset': U32 = 0,
     startToken': (Token|None) = None,
     endToken': (Token|None) = None,
     source': (Source|None) = None
   ) =>
-    startOff = startOff'
-    endOff = endOff'
+    startOffset = match startToken' | let t: Token => t.startOffset else startOffset' end
+    endOffset = match endToken' | let t: Token => t.endOffset else endOffset' end
     startToken = startToken'
     endToken = endToken'
     source = source'
   fun string(): String iso^ =>
     recover
-      String().append("(").append(startOff.string())
-        .append(",").append(endOff.string()).append(")")
+      String()
+        .append("(").append(startOffset.string())
+        .append(",").append(endOffset.string()).append(")")
     end
   fun eq(that: box->Location): Bool =>
-    (this.startOff == that.startOff) and
-    (this.endOff == that.endOff)
+    (this.startOffset == that.startOffset)
+      and
+    (this.endOffset == that.endOffset)
+    // TODO eq on source
 
 /**
  * The list of all possible AST node types.

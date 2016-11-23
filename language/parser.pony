@@ -59,7 +59,8 @@ class GraphQLParser
     repeat
       definitions.push(parse_definition(lexer))
     until skip(lexer, EOF) end
-    DocumentNode(loc(lexer, start), definitions)
+    let loc' = loc(lexer, start)
+    DocumentNode(loc', definitions)
 
   fun ref parse_definition(lexer: GraphQLLexer): DefinitionNode ? =>
     """
@@ -114,12 +115,12 @@ class GraphQLParser
   fun ref parse_operation_definition(lexer: GraphQLLexer): DefinitionNode ? =>
     let start = lexer.token()
     if peek(lexer, BraceL) then
-      let loc' = loc(lexer, start)
       let operation' = TnQuery
       let name' = None
       let variableDefinitions' = None
       let directives' = None
       let selectionSet' = parse_selection_set(lexer)
+      let loc' = loc(lexer, start)
       OperationDefinitionNode(
         loc', operation', name', variableDefinitions', directives', selectionSet')
     else
@@ -129,12 +130,12 @@ class GraphQLParser
       else
         None
       end
-      let loc' = loc(lexer, start)
       let operation' = operation
       let name' = name
       let variableDefinitions' = parse_variable_definitions(lexer)
       let directives' = parse_directives(lexer)
       let selectionSet' = parse_selection_set(lexer)
+      let loc' = loc(lexer, start)
       OperationDefinitionNode(
         loc', operation', name', variableDefinitions', directives', selectionSet')
     end
@@ -143,8 +144,9 @@ class GraphQLParser
     let start = lexer.token()
     let parseFn = {(self: GraphQLParser, lexer': GraphQLLexer): SelectionNode ? =>
       self.parse_selection(lexer')} ref
-    SelectionSetNode(
-      loc(lexer, start), many[SelectionNode](lexer, BraceL, parseFn, BraceR))
+    let selections' = many[SelectionNode](lexer, BraceL, parseFn, BraceR)
+    let loc' = loc(lexer, start)
+    SelectionSetNode(loc', selections')
 
   fun ref parse_selection(lexer: GraphQLLexer): SelectionNode ? =>
     if peek(lexer, SPREAD) then
@@ -168,7 +170,8 @@ class GraphQLParser
     if peek(lexer, NAME) and (lexer.token().value != "on") then
       let name = parse_fragment_name(lexer)
       let directives = parse_directives(lexer)
-      FragmentSpreadNode(loc(lexer, start), name, directives)
+      let loc' = loc(lexer, start)
+      FragmentSpreadNode(loc', name, directives)
     else
       let typeCondition = if (lexer.token().value == "on") then
         lexer.advance()
@@ -178,8 +181,8 @@ class GraphQLParser
       end
       let directives = parse_directives(lexer)
       let selectionSet = parse_selection_set(lexer)
-      InlineFragmentNode(loc(lexer, start),
-        typeCondition, directives, selectionSet)
+      let loc' = loc(lexer, start)
+      InlineFragmentNode(loc', typeCondition, directives, selectionSet)
     end
 
   fun ref parse_field(lexer: GraphQLLexer): FieldNode ? =>
@@ -201,8 +204,8 @@ class GraphQLParser
     else
       None
     end
-    FieldNode(loc(lexer, start), alias, name,
-      arguments', directives', selectionSet')
+    let loc' = loc(lexer, start)
+    FieldNode(loc', alias, name, arguments', directives', selectionSet')
 
   fun ref parse_operation_type(lexer: GraphQLLexer): OperationTypeNode ? =>
     """
@@ -220,14 +223,17 @@ class GraphQLParser
 
   fun ref parse_name(lexer: GraphQLLexer): NameNode ? =>
     let token = expect(lexer, NAME)
-    NameNode(loc(lexer, token), token.value)
+    let loc' = loc(lexer, token)
+    NameNode(loc', token.value)
 
   fun ref parse_named_type(lexer: GraphQLLexer): NamedTypeNode ? =>
     """
     NamedType : Name
     """
     let start = lexer.token()
-    NamedTypeNode(loc(lexer, start), parse_name(lexer))
+    let name' = parse_name(lexer)
+    let loc' = loc(lexer, start)
+    NamedTypeNode(loc', name')
 
   fun ref parse_variable_definitions(lexer: GraphQLLexer): Array[VariableDefinitionNode] ? =>
     """
@@ -254,12 +260,8 @@ class GraphQLParser
     else
       None
     end
-    VariableDefinitionNode(
-      loc(lexer, start),
-      variable',
-      type',
-      defaultValue'
-    )
+    let loc' = loc(lexer, start)
+    VariableDefinitionNode(loc', variable', type', defaultValue')
 
   fun ref parse_directives(lexer: GraphQLLexer): Array[DirectiveNode] ? =>
     """
@@ -279,7 +281,8 @@ class GraphQLParser
     expect(lexer, AT)
     let name' = parse_name(lexer)
     let arguments' = parse_arguments(lexer)
-    DirectiveNode(loc(lexer, start), name', arguments')
+    let loc' = loc(lexer, start)
+    DirectiveNode(loc', name', arguments')
 
   // Implements the parsing rules in the Types section.
 
@@ -294,13 +297,15 @@ class GraphQLParser
     let type' = if skip(lexer, BracketL) then
       let type'' = parse_type_reference(lexer)
       expect(lexer, BracketR)
-      ListTypeNode(loc(lexer, start), type'')
+      let loc' = loc(lexer, start)
+      ListTypeNode(loc', type'')
     else
       parse_named_type(lexer)
     end
 
     if skip(lexer, BANG) then
-      NonNullTypeNode(loc(lexer, start), type')
+      let loc' = loc(lexer, start)
+      NonNullTypeNode(loc', type')
     else
       type'
     end
@@ -325,7 +330,8 @@ class GraphQLParser
     let name': NameNode = parse_name(lexer)
     expect(lexer, COLON)
     let value' = parse_value_literal(lexer, false)
-    ArgumentNode(loc(lexer, start), name', value')
+    let loc' = loc(lexer, start)
+    ArgumentNode(loc', name', value')
 
   // Implements the parsing rules in the Values section.
 
@@ -356,24 +362,30 @@ class GraphQLParser
       return parse_object(lexer, isConst)
     | GraphQLInt =>
       lexer.advance()
-      return IntValueNode(loc(lexer, token), token.value)
+      let loc' = loc(lexer, token)
+      return IntValueNode(loc', token.value)
     | GraphQLFloat =>
       lexer.advance()
-      return FloatValueNode(loc(lexer, token), token.value)
+      let loc' = loc(lexer, token)
+      return FloatValueNode(loc', token.value)
     | GraphQLString =>
       lexer.advance()
-      return StringValueNode(loc(lexer, token), token.value)
+      let loc' = loc(lexer, token)
+      return StringValueNode(loc', token.value)
     | NAME =>
       if (token.value == "true") or (token.value == "false") then
         lexer.advance()
         let v = if token.value == "true" then true else false end
-        return BooleanValueNode(loc(lexer, token), v)
+        let loc' = loc(lexer, token)
+        return BooleanValueNode(loc', v)
       elseif (token.value == "null") then
         lexer.advance()
-        return NullValueNode(loc(lexer, token))
+        let loc' = loc(lexer, token)
+        return NullValueNode(loc')
       end
       lexer.advance()
-      return EnumValueNode(loc(lexer, token), token.value)
+      let loc' = loc(lexer, token)
+      return EnumValueNode(loc', token.value)
     | DOLLAR =>
       if (not isConst) then
         return parse_variable(lexer)
@@ -388,7 +400,9 @@ class GraphQLParser
     """
     let start = lexer.token()
     expect(lexer, DOLLAR)
-    VariableNode(loc(lexer, start), parse_name(lexer))
+    let name' = parse_name(lexer)
+    let loc' = loc(lexer, start)
+    VariableNode(loc', name')
 
   fun ref parse_const_value(lexer: GraphQLLexer): ValueNode ? =>
     parse_value_literal(lexer, true)
@@ -411,7 +425,8 @@ class GraphQLParser
         self.parse_value_value(lexer')} ref
     end
     let values': Array[ValueNode] = any[ValueNode](lexer, BracketL, item, BracketR)
-    ListValueNode(loc(lexer, start), values')
+    let loc' = loc(lexer, start)
+    ListValueNode(loc', values')
 
   fun ref parse_object(lexer: GraphQLLexer, isConst: Bool): ObjectValueNode ? =>
     """
@@ -425,7 +440,8 @@ class GraphQLParser
     while (not skip(lexer, BraceR)) do
       fields.push(parse_object_field(lexer, isConst))
     end
-    ObjectValueNode(loc(lexer, start), fields)
+    let loc' = loc(lexer, start)
+    ObjectValueNode(loc', fields)
 
   fun ref parse_object_field(lexer: GraphQLLexer, isConst: Bool): ObjectFieldNode ? =>
     """
@@ -435,7 +451,8 @@ class GraphQLParser
     let name' = parse_name(lexer)
     expect(lexer, COLON)
     let value' = parse_value_literal(lexer, isConst)
-    ObjectFieldNode(loc(lexer, start), name', value')
+    let loc' = loc(lexer, start)
+    ObjectFieldNode(loc', name', value')
 
   fun ref parse_fragment_definition(lexer: GraphQLLexer): DefinitionNode ? =>
     """
@@ -451,8 +468,8 @@ class GraphQLParser
     let typeCondition' = parse_named_type(lexer)
     let directives' = parse_directives(lexer)
     let selectionSet' = parse_selection_set(lexer)
-    FragmentDefinitionNode(loc(lexer, start),
-      name', typeCondition', directives', selectionSet')
+    let loc' = loc(lexer, start)
+    FragmentDefinitionNode(loc', name', typeCondition', directives', selectionSet')
 
   fun ref parse_fragment_name(lexer: GraphQLLexer): NameNode ? =>
     """
@@ -516,8 +533,8 @@ class GraphQLParser
         s.parse_operation_type_definition(l)} ref,
       BraceR
     )
-    SchemaDefinitionNode(loc(lexer, start),
-      directives, operationTypes)
+    let loc' = loc(lexer, start)
+    SchemaDefinitionNode(loc', directives, operationTypes)
 
   fun ref parse_operation_type_definition(
     lexer: GraphQLLexer
@@ -526,8 +543,8 @@ class GraphQLParser
     let operation = parse_operation_type(lexer)
     expect(lexer, COLON)
     let type' = parse_named_type(lexer)
-    OperationTypeDefinitionNode(
-      loc(lexer, start), operation, type')
+    let loc' = loc(lexer, start)
+    OperationTypeDefinitionNode(loc', operation, type')
 
   fun ref parse_scalar_type_definition(
     lexer: GraphQLLexer
@@ -539,7 +556,8 @@ class GraphQLParser
     expect_keyword(lexer, "scalar")
     let name = parse_name(lexer)
     let directives = parse_directives(lexer)
-    ScalarTypeDefinitionNode(loc(lexer, start), name, directives)
+    let loc' = loc(lexer, start)
+    ScalarTypeDefinitionNode(loc', name, directives)
 
   fun ref parse_object_type_definition(lexer: GraphQLLexer): ObjectTypeDefinitionNode ? =>
     """
@@ -558,7 +576,8 @@ class GraphQLParser
         s.parse_field_definition(l)} ref,
       BracketR
     )
-    ObjectTypeDefinitionNode(loc(lexer, start), name, interfaces, directives, fields)
+    let loc' = loc(lexer, start)
+    ObjectTypeDefinitionNode(loc', name, interfaces, directives, fields)
 
   fun ref parse_implements_interfaces(lexer: GraphQLLexer): Array[NamedTypeNode] ? =>
     """
@@ -583,7 +602,8 @@ class GraphQLParser
     expect(lexer, COLON)
     let type' = parse_type_reference(lexer)
     let directives = parse_directives(lexer)
-    FieldDefinitionNode(loc(lexer, start), name, args, type', directives)
+    let loc' = loc(lexer, start)
+    FieldDefinitionNode(loc', name, args, type', directives)
 
   fun ref parse_argument_defs(lexer: GraphQLLexer): Array[InputValueDefinitionNode] ? =>
     """
@@ -614,7 +634,8 @@ class GraphQLParser
       None
     end
     let directives = parse_directives(lexer)
-    InputValueDefinitionNode(loc(lexer, start), name, type', defaultValue, directives)
+    let loc' = loc(lexer, start)
+    InputValueDefinitionNode(loc', name, type', defaultValue, directives)
 
   fun ref parse_interface_type_definition(
     lexer: GraphQLLexer
@@ -633,7 +654,8 @@ class GraphQLParser
         s.parse_field_definition(l)} ref,
       BraceR
     )
-    InterfaceTypeDefinitionNode(loc(lexer, start), name, directives, fields)
+    let loc' = loc(lexer, start)
+    InterfaceTypeDefinitionNode(loc', name, directives, fields)
 
   fun ref parse_union_type_definition(lexer: GraphQLLexer): UnionTypeDefinitionNode ? =>
     """
@@ -645,7 +667,8 @@ class GraphQLParser
     let directives = parse_directives(lexer)
     expect(lexer, EQUALS)
     let types = parse_union_members(lexer)
-    UnionTypeDefinitionNode(loc(lexer, start), name, directives, types)
+    let loc' = loc(lexer, start)
+    UnionTypeDefinitionNode(loc', name, directives, types)
 
   fun ref parse_union_members(lexer: GraphQLLexer): Array[NamedTypeNode] ? =>
     """
@@ -674,7 +697,8 @@ class GraphQLParser
         s.parse_enum_value_definition(l)} ref,
       BraceR
     )
-    EnumTypeDefinitionNode(loc(lexer, start), name, directives, values)
+    let loc' = loc(lexer, start)
+    EnumTypeDefinitionNode(loc', name, directives, values)
 
   fun ref parse_enum_value_definition(lexer: GraphQLLexer): EnumValueDefinitionNode ? =>
     """
@@ -685,7 +709,8 @@ class GraphQLParser
     let start = lexer.token()
     let name = parse_name(lexer)
     let directives = parse_directives(lexer)
-    EnumValueDefinitionNode(loc(lexer, start), name, directives)
+    let loc' = loc(lexer, start)
+    EnumValueDefinitionNode(loc', name, directives)
 
   fun ref parse_input_object_type_definition(
     lexer: GraphQLLexer
@@ -704,7 +729,8 @@ class GraphQLParser
         s.parse_input_value_def(l)} ref,
       BraceR
     )
-    InputObjectTypeDefinitionNode(loc(lexer, start), name, directives, fields)
+    let loc' = loc(lexer, start)
+    InputObjectTypeDefinitionNode(loc', name, directives, fields)
 
   fun ref parse_type_extension_definition(
     lexer: GraphQLLexer
@@ -715,7 +741,8 @@ class GraphQLParser
     let start = lexer.token()
     expect_keyword(lexer, "extend")
     let definition = parse_object_type_definition(lexer)
-    TypeExtensionDefinitionNode(loc(lexer, start), definition)
+    let loc' = loc(lexer, start)
+    TypeExtensionDefinitionNode(loc', definition)
 
   fun ref parse_directive_definition(lexer: GraphQLLexer): DirectiveDefinitionNode ? =>
     """
@@ -729,7 +756,8 @@ class GraphQLParser
     let args = parse_argument_defs(lexer)
     expect_keyword(lexer, "on")
     let locations = parse_directive_locations(lexer)
-    DirectiveDefinitionNode(loc(lexer, start), name, args, locations)
+    let loc' = loc(lexer, start)
+    DirectiveDefinitionNode(loc', name, args, locations)
 
   fun ref parse_directive_locations(lexer: GraphQLLexer): Array[NameNode] ? =>
     """
@@ -762,9 +790,16 @@ class GraphQLParser
     end
     match'
 
-  fun loc(lexer: GraphQLLexer, token: Token): Location =>
-    Location(token.line, token.column,
-      token, token, Source("TODO", "TODO"))
+  fun loc(lexer: GraphQLLexer, startToken: Token): Location =>
+    """
+    Returns a location object, used to identify the place in
+    the source that created a given parsed object.
+    """
+    Location(where
+      startToken' = startToken,
+      endToken' = lexer.lastToken(),
+      source' = Source("TODO", "TODO")
+    )
 
   fun ref expect(lexer: GraphQLLexer, kind: TokenKind): Token ? =>
     """

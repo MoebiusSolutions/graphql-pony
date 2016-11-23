@@ -26,11 +26,12 @@ class GraphQLLexer
   let _input: String
   let _runes: StringRunes
   var _collect: String ref = String()
+  var _position: U32 = 0
   var _line: U32 = 1
   var _column: U32 = 1
   var _nextRune: (U32|None) = None
-  var _token: Token = Token(SOF, "", 0, 0)
-  var _lastToken: Token = Token(SOF, "", 0, 0)
+  var _token: Token = Token(SOF, "", 0, 0, 0, 0)
+  var _lastToken: Token = Token(SOF, "", 0, 0, 0, 0)
 
   new create(env' : Env, input : String) =>
     env = env'
@@ -51,7 +52,7 @@ class GraphQLLexer
       repeat
         token' = match next_token()
         | let t: Token => t
-        else Token(EOF, "", _line, _column) end
+        else Token(EOF, "", _position, _position, _line, _column) end
 // //        token = token.next = readToken(this, token);
       until (token'.kind is COMMENT) == false end
       _token = token'
@@ -71,6 +72,7 @@ class GraphQLLexer
     it is the next rune returned
     """
     _nextRune = rune
+    _position = _position - 1
     if rune == '\n' then
       _line = _line - 1
     else
@@ -86,6 +88,7 @@ class GraphQLLexer
     else
       rune = _runes.next()
     end
+    _position = _position + 1
     if rune == '\n' then
       _line = _line + 1
       _column = 1
@@ -100,6 +103,7 @@ class GraphQLLexer
 
     [_A-Za-z][_0-9A-Za-z]*
     """
+    let start = _position - 1
     let col = _column - 1
     let name = String()
     name.push_utf32(rune)
@@ -116,12 +120,13 @@ class GraphQLLexer
         break
       end
     end
-    Token(NAME, name.clone(), _line, col)
+    Token(NAME, name.clone(), start, _position, _line, col)
 
   fun ref _read_comment() : Token ? =>
     """
     Read comment - from # until the end of the line
     """
+    let start = _position - 1
     let col = _column - 1
     let comment = String()
     while has_next_rune() do
@@ -132,9 +137,10 @@ class GraphQLLexer
         comment.push_utf32(r)
       end
     end
-    Token(COMMENT, comment.clone(), _line, col)
+    Token(COMMENT, comment.clone(), start, _position, _line, col)
 
   fun ref _read_spread() : Token ? =>
+    let start = _position - 1
     let col = _column - 1
     let dot2 = next_rune()
     if dot2 != '.' then
@@ -144,7 +150,7 @@ class GraphQLLexer
     if dot3 != '.' then
       error
     end
-    Token(SPREAD, "...", _line, col)
+    Token(SPREAD, "...", start, _position, _line, col)
 
   fun ref _read_digits(number : String ref) ? =>
     while has_next_rune() do
@@ -165,6 +171,7 @@ class GraphQLLexer
     Int:   -?(0|[1-9][0-9]*)
     Float: -?(0|[1-9][0-9]*)(\.[0-9]+)?((E|e)(+|-)?[0-9]+)?
     """
+    let start = _position - 1
     let col = _column - 1
     var is_float = false
     let number = String()
@@ -209,9 +216,9 @@ class GraphQLLexer
     end
 
     if is_float then
-      Token(GraphQLFloat, number.clone(), _line, col)
+      Token(GraphQLFloat, number.clone(), start, _position, _line, col)
     else
-      Token(GraphQLInt, number.clone(), _line, col)
+      Token(GraphQLInt, number.clone(), start, _position, _line, col)
     end
 
   fun ref _make_unicode(d1 : U32, d2 : U32, d3 : U32, d4 : U32)  : U32 =>
@@ -222,6 +229,7 @@ class GraphQLLexer
     Read a quoted string. Lexes common escape sequences.
     "([^"\\\u000A\u000D]|(\\(u[0-9a-fA-F]{4}|["\\/bfnrt])))*"
     """
+    let start = _position - 1
     let col = _column - 1
     let string = String()
     while has_next_rune() do
@@ -252,7 +260,7 @@ class GraphQLLexer
         string.push_utf32(r)
       end
     end
-    Token(GraphQLString, string.clone(), _line, col)
+    Token(GraphQLString, string.clone(), start, _position, _line, col)
 
   fun ref _skip_whitespace() =>
     try
@@ -282,23 +290,24 @@ class GraphQLLexer
     """
     try
       _skip_whitespace()
+      let start = _position
       let col = _column
       let rune = next_rune()
       match rune
-      | BANG.rune() => Token(BANG, "!", _line, col)
+      | BANG.rune() => Token(BANG, "!", start, _position, _line, col)
       | '#' => _read_comment()
-      | DOLLAR.rune() => Token(DOLLAR, "$", _line, col)
-      | ParenL.rune() => Token(ParenL, "(", _line, col)
-      | ParenR.rune() => Token(ParenR, ")", _line, col)
+      | DOLLAR.rune() => Token(DOLLAR, "$",  start, _position,_line, col)
+      | ParenL.rune() => Token(ParenL, "(",  start, _position,_line, col)
+      | ParenR.rune() => Token(ParenR, ")",  start, _position,_line, col)
       | '.' => _read_spread()
-      | COLON.rune() => Token(COLON, ":", _line, col)
-      | EQUALS.rune() => Token(EQUALS, "=", _line, col)
-      | AT.rune() => Token(AT, "@", _line, col)
-      | BracketL.rune() => Token(BracketL, "[", _line, col)
-      | BracketR.rune() => Token(BracketR, "]", _line, col)
-      | BraceL.rune() => Token(BraceL, "{", _line, col)
-      | PIPE.rune() => Token(PIPE, "|", _line, col)
-      | BraceR.rune() => Token(BraceR, "}", _line, col)
+      | COLON.rune() => Token(COLON, ":",  start, _position,_line, col)
+      | EQUALS.rune() => Token(EQUALS, "=",  start, _position,_line, col)
+      | AT.rune() => Token(AT, "@",  start, _position,_line, col)
+      | BracketL.rune() => Token(BracketL, "[",  start, _position,_line, col)
+      | BracketR.rune() => Token(BracketR, "]",  start, _position,_line, col)
+      | BraceL.rune() => Token(BraceL, "{",  start, _position,_line, col)
+      | PIPE.rune() => Token(PIPE, "|",  start, _position,_line, col)
+      | BraceR.rune() => Token(BraceR, "}",  start, _position,_line, col)
       | let c : U32 if ((c >= 'A') and (c <= 'Z'))
                     or ((c >= 'a') and (c <= 'z'))
                     or (c == '_')  =>
