@@ -45,7 +45,7 @@ type TokenKind is (SOF | EOF | BANG | DOLLAR | ParenL | ParenR
   | BraceL | PIPE | BraceR | NAME | GraphQLInt | GraphQLFloat | GraphQLString
   | COMMENT )
 
-class ArrayToString
+class ArraysHelper
   fun string[T: Stringable #read](a': (Array[T] box|None)): String iso^ =>
     match a'
     | let a: Array[T] box =>
@@ -60,6 +60,27 @@ class ArrayToString
       s.clone()
     else
       "None".clone()
+    end
+  fun directive_nodes(
+    directives: (Array[DirectiveNode] box|None)
+  ): (Array[ASTNode box]|None) =>
+    match directives
+    | let a': Array[DirectiveNode] box =>
+      Array[ASTNode box].append(a')
+    end
+  fun argument_nodes(
+    arguments: (Array[ArgumentNode] box|None)
+  ): (Array[ASTNode box]|None) =>
+    match arguments
+    | let a': Array[ArgumentNode] box =>
+      Array[ASTNode box].append(a')
+    end
+  fun named_type_nodes(
+    a: (Array[NamedTypeNode] box|None)
+  ): (Array[ASTNode box]|None) =>
+    match a
+    | let a': Array[NamedTypeNode] box =>
+      Array[ASTNode box].append(a')
     end
 
 class val Token
@@ -211,13 +232,15 @@ class NameNode
 
 // Document
 class DocumentNode is (Equatable[DocumentNode] & Stringable)
-  let atos: ArrayToString = ArrayToString
+  let atos: ArraysHelper = ArraysHelper
   let kind : String = "Document"
   let loc: (Location|None)
   let definitions: Array[DefinitionNode]
   new create(loc' : Location, definitions': Array[DefinitionNode]) =>
     loc = loc'
     definitions = definitions'
+  fun definitionNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(definitions)
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
     s.append(" loc:").append(loc.string()).append("\n")
@@ -232,7 +255,7 @@ type DefinitionNode is
   )
 
 class OperationDefinitionNode
-  let atos: ArrayToString = ArrayToString
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "OperationDefinition"
   let loc: (Location|None)
   let operation: OperationTypeNode
@@ -254,6 +277,13 @@ class OperationDefinitionNode
     variableDefinitions = variableDefinitions'
     directives = directives'
     selectionSet = selectionSet'
+  fun variableDefinitionNodes(): (Array[ASTNode box]|None) =>
+    match variableDefinitions
+    | let a': Array[VariableDefinitionNode] box =>
+      Array[ASTNode box].append(a')
+    end
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
       .append("loc:").append(loc.string()).append("\n")
@@ -308,6 +338,8 @@ class SelectionSetNode is Stringable
   new create(loc': Location, selections': Array[SelectionNode]) =>
     loc = loc'
     selections = selections'
+  fun selectionNodes(): Array[ASTNode box] =>
+      Array[ASTNode box].append(selections)
   fun string(): String iso^ =>
     let s = String().append(kind).append(loc.string()).append("[\n")
     for n in selections.values() do
@@ -323,7 +355,7 @@ type SelectionNode is
   )
 
 class FieldNode
-  let atos: ArrayToString = ArrayToString
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "Field"
   let loc: (Location|None)
   let alias: (NameNode|None)
@@ -345,6 +377,10 @@ class FieldNode
     arguments = arguments'
     directives = directives'
     selectionSet = selectionSet'
+  fun argumentNodes(): (Array[ASTNode box]|None) =>
+    atos.argument_nodes(arguments)
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     let s = String()
     s.append(kind).append("{")
@@ -376,6 +412,7 @@ class ArgumentNode is Stringable
 
 // Fragments
 class FragmentSpreadNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "FragmentSpread"
   let loc: (Location|None)
   let name: NameNode
@@ -388,10 +425,13 @@ class FragmentSpreadNode
     loc = loc'
     name = name'
     directives = directives'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class InlineFragmentNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "InlineFragment"
   let loc: (Location|None)
   let typeCondition: (NamedTypeNode|None)
@@ -407,10 +447,13 @@ class InlineFragmentNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class FragmentDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "FragmentDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -429,6 +472,8 @@ class FragmentDefinitionNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
@@ -532,13 +577,15 @@ class EnumValueNode is (Equatable[ValueNode] & Stringable)
       .append("}").clone()
 
 class ListValueNode is (Equatable[ValueNode] & Stringable)
-  let atos: ArrayToString = ArrayToString
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "ListValue"
   let loc: (Location|None)
   let values: Array[ValueNode]
   new create(loc': Location, values': Array[ValueNode]) =>
     loc = loc'
     values = values'
+  fun valueNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(values)
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
@@ -546,13 +593,15 @@ class ListValueNode is (Equatable[ValueNode] & Stringable)
       .append("}").clone()
 
 class ObjectValueNode is (Equatable[ValueNode] & Stringable)
-  let atos: ArrayToString = ArrayToString
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "ObjectValue"
   let loc: (Location|None)
   let fields: Array[ObjectFieldNode]
   new create(loc': Location, fields': Array[ObjectFieldNode]) =>
     loc = loc'
     fields = fields'
+  fun fieldNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(fields)
   fun string(): String iso^ =>
     String()
       .append(kind).append("{")
@@ -574,6 +623,7 @@ class ObjectFieldNode
 
 // Directives
 class DirectiveNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "Directive"
   let loc: (Location|None)
   let name: NameNode
@@ -582,6 +632,8 @@ class DirectiveNode
     loc = loc'
     name = name'
     arguments = arguments'
+  fun argumentNodes(): (Array[ASTNode box]|None) =>
+    atos.argument_nodes(arguments)
   fun string(): String iso^ =>
     kind.clone()
 
@@ -631,6 +683,7 @@ type TypeSystemDefinitionNode is
   )
 
 class SchemaDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "SchemaDefinition"
   let loc: (Location|None)
   let directives: Array[DirectiveNode]
@@ -642,6 +695,10 @@ class SchemaDefinitionNode
     loc = loc'
     directives = directives'
     operationTypes = operationTypes'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun operationTypeNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(operationTypes)
   fun string(): String iso^ =>
     kind.clone()
 
@@ -671,6 +728,7 @@ type TypeDefinitionNode is
   )
 
 class ScalarTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "ScalarTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -679,10 +737,13 @@ class ScalarTypeDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class ObjectTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "ObjectTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -701,10 +762,17 @@ class ObjectTypeDefinitionNode
     interfaces = interfaces'
     directives = directives'
     fields = fields'
+  fun interfaceNodes(): (Array[ASTNode box]|None) =>
+    atos.named_type_nodes(interfaces)
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun fieldNodes(): (Array[ASTNode box]) =>
+    Array[ASTNode box].append(fields)
   fun string(): String iso^ =>
     kind.clone()
 
 class FieldDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "FieldDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -723,10 +791,15 @@ class FieldDefinitionNode
     arguments = arguments'
     typeNode = typeNode'
     directives = directives'
+  fun argumentNodes(): (Array[ASTNode box]|None) =>
+    Array[ASTNode box].append(arguments)
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class InputValueDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "InputValueDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -745,10 +818,13 @@ class InputValueDefinitionNode
     typeNode = typeNode'
     defaultValue = defaultValue'
     directives = directives'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class InterfaceTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "InterfaceTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -764,10 +840,15 @@ class InterfaceTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun fieldNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(fields)
   fun string(): String iso^ =>
     kind.clone()
 
 class UnionTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "UnionTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -783,10 +864,15 @@ class UnionTypeDefinitionNode
     name = name'
     directives = directives'
     types = types'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun typeNodes(): (Array[ASTNode box]|None) =>
+    atos.named_type_nodes(types)
   fun string(): String iso^ =>
     kind.clone()
 
 class EnumTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "EnumTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -802,10 +888,15 @@ class EnumTypeDefinitionNode
     name = name'
     directives = directives'
     values = values'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun valueNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(values)
   fun string(): String iso^ =>
     kind.clone()
 
 class EnumValueDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "EnumValueDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -818,10 +909,13 @@ class EnumValueDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
 
 class InputObjectTypeDefinitionNode
+  let atos: ArraysHelper = ArraysHelper
   let kind: String = "InputObjectTypeDefinition"
   let loc: (Location|None)
   let name: NameNode
@@ -837,6 +931,10 @@ class InputObjectTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
+  fun directiveNodes(): (Array[ASTNode box]|None) =>
+    atos.directive_nodes(directives)
+  fun fieldNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(fields)
   fun string(): String iso^ =>
     kind.clone()
 
@@ -869,5 +967,12 @@ class DirectiveDefinitionNode
     name = name'
     arguments = arguments'
     locations = locations'
+  fun argumentNodes(): (Array[ASTNode box]|None) =>
+    match arguments
+    | let a': Array[InputValueDefinitionNode] box =>
+      Array[ASTNode box].append(a')
+    end
+  fun locationNodes(): Array[ASTNode box] =>
+    Array[ASTNode box].append(locations)
   fun string(): String iso^ =>
     kind.clone()

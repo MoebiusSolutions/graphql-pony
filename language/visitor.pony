@@ -1,3 +1,5 @@
+use "collections"
+
 primitive BREAK
 primitive SKIP
 primitive DELETE
@@ -5,21 +7,29 @@ primitive DELETE
 type VisitorResponse is (BREAK|SKIP|ASTNode|DELETE|None)
 
 interface Visitor
+  fun detailed_enter(
+    node: ASTNode,
+    key: String,
+    parent: ASTNode,
+    path: Array[String],
+    ancestors: Array[ASTNode box]
+  ) =>
+    enter(node)
   fun enter(node: ASTNode): VisitorResponse
   fun leave(node: ASTNode): VisitorResponse
 
 class VisitStack
   let inArray: Bool
-  let index: U32
-  let keys: Array[ASTNode]
-  let edits: Array[(U32, ASTNode)]
+  let index: USize
+  let keys: Array[String]
+  let edits: Array[(U32, ASTNode|None)]
   let prev: VisitStack
 
   new create(
     inArray': Bool,
-    index': U32,
-    keys': Array[ASTNode],
-    edits': Array[(U32, ASTNode)],
+    index': USize,
+    keys': Array[String],
+    edits': Array[(U32, ASTNode|None)],
     prev': VisitStack
   ) =>
     inArray = inArray'
@@ -29,238 +39,267 @@ class VisitStack
     prev = prev'
 
 class Visit
-  fun ref query_document_keys(node: ASTNode, key: (String|None) = None):
-    (ASTNode
-    |Array[DefinitionNode]
-    |Array[VariableDefinitionNode]
-    |Array[DirectiveNode]
-    |Array[SelectionNode]
-    |Array[OperationTypeDefinitionNode]
-    |Array[ArgumentNode]
-    |Array[ValueNode]
-    |Array[ObjectFieldNode]
-    |Array[NamedTypeNode]
-    |Array[FieldDefinitionNode]
-    |Array[InputValueDefinitionNode]
-    |Array[EnumValueDefinitionNode]
-    |Array[NameNode]
-    |Array[String]
-    |None
-    )
-  =>
+  fun ref query_document_keys(node: ASTNode box): Array[String] =>
     match node
-    | let n: DocumentNode =>
+    | let n: DocumentNode box =>
+      [ "definitions" ]
+    | let n: OperationDefinitionNode box =>
+      [ "name", "variableDefinitions", "directives", "selectionSet" ]
+    | let n: VariableDefinitionNode box =>
+      [ "variable", "type", "defaultValue" ]
+    | let n: VariableNode box =>
+      [ "name" ]
+    | let n: SelectionSetNode box =>
+      [ "selections" ]
+    | let n: FieldNode box =>
+      [ "alias", "name", "arguments", "directives", "selectionSet" ]
+    | let n: ArgumentNode box =>
+      [ "name", "value" ]
+
+    | let n: FragmentSpreadNode box =>
+      [ "name", "directives" ]
+    | let n: InlineFragmentNode box =>
+      [ "typeCondition", "directives", "selectionSet" ]
+    | let n: FragmentDefinitionNode box =>
+      [ "name", "typeCondition", "directives", "selectionSet" ]
+
+    | let n: IntValueNode box => Array[String]
+    | let n: FloatValueNode box => Array[String]
+    | let n: StringValueNode box => Array[String]
+    | let n: BooleanValueNode box => Array[String]
+    | let n: NullValueNode box => Array[String]
+    | let n: EnumValueNode box => Array[String]
+    | let n: ListValueNode box =>
+      [ "values" ]
+    | let n: ObjectValueNode box =>
+      [ "fields" ]
+    | let n: ObjectFieldNode box =>
+      [ "name", "value" ]
+
+    | let n: DirectiveNode box =>
+      [ "name", "arguments" ]
+
+    | let n: NamedTypeNode box =>
+      [ "name" ]
+    | let n: ListTypeNode box =>
+      [ "type" ]
+    | let n: NonNullTypeNode box =>
+      [ "type" ]
+
+    | let n: SchemaDefinitionNode box =>
+      [ "directives", "operationTypes" ]
+    | let n: OperationTypeDefinitionNode box =>
+      [ "type" ]
+
+    | let n: ScalarTypeDefinitionNode box =>
+      [ "name", "directives" ]
+    | let n: ObjectTypeDefinitionNode box =>
+      [ "name", "interfaces", "directives", "fields" ]
+    | let n: FieldDefinitionNode box =>
+      [ "name", "arguments", "type", "directives" ]
+    | let n: InputValueDefinitionNode box =>
+      [ "name", "type", "defaultValue", "directives" ]
+    | let n: InterfaceTypeDefinitionNode box =>
+      [ "name", "directives", "fields" ]
+    | let n: UnionTypeDefinitionNode box =>
+      [ "name", "directives", "types" ]
+    | let n: EnumTypeDefinitionNode box =>
+      [ "name", "directives", "values" ]
+    | let n: EnumValueDefinitionNode box =>
+      [ "name", "directives" ]
+    | let n: InputObjectTypeDefinitionNode box =>
+      [ "name", "directives", "fields" ]
+
+    | let n: TypeExtensionDefinitionNode box =>
+      [ "definition" ]
+
+    | let n: DirectiveDefinitionNode box =>
+      [ "name", "arguments", "locations" ]
+    else
+      Array[String]
+    end
+
+  fun ref query_document_key(
+    node: ASTNode box, key: String
+  ): (ASTNode box|Array[ASTNode box]|None) =>
+    match node
+    | let n: DocumentNode box =>
       match key
-      | "definitions" => n.definitions
-      | None => [ "definitions" ]
+      | "definitions" => n.definitionNodes()
       end
-    | let n: OperationDefinitionNode =>
+    | let n: OperationDefinitionNode box =>
       match key
       | "name" => n.name
-      | "variableDefinitions" => n.variableDefinitions
-      | "directives" => n.directives
+      | "variableDefinitions" => n.variableDefinitionNodes()
+      | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
-      | None =>
-        [ "name", "variableDefinitions", "directives", "selectionSet" ]
       end
-    | let n: VariableDefinitionNode =>
+    | let n: VariableDefinitionNode box =>
       match key
       | "variable" => n.variable
       | "type" => n.typeNode
       | "defaultValue" => n.defaultValue
-      | None => [ "variable", "type", "defaultValue" ]
       end
-    | let n: VariableNode =>
+    | let n: VariableNode box =>
       match key
       | "name" => n.name
-      | None => [ "name" ]
       end
-    | let n: SelectionSetNode =>
+    | let n: SelectionSetNode box =>
       match key
-      | "selections" => n.selections
-      | None => [ "selections" ]
+      | "selections" => n.selectionNodes()
       end
-    | let n: FieldNode =>
+    | let n: FieldNode box =>
       match key
       | "alias" => n.alias
       | "name" => n.name
-      | "arguments" => n.arguments
-      | "directives" => n.directives
+      | "arguments" => n.argumentNodes()
+      | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
-      | None => [ "alias", "name", "arguments", "directives", "selectionSet" ]
       end
-    | let n: ArgumentNode =>
+    | let n: ArgumentNode box =>
       match key
       | "name" => n.name
       | "value" => n.value
-      | None => [ "name", "value" ]
       end
 
-    | let n: FragmentSpreadNode =>
+    | let n: FragmentSpreadNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | None => [ "name", "directives" ]
+      | "directives" => n.directiveNodes()
       end
-    | let n: InlineFragmentNode =>
+    | let n: InlineFragmentNode box =>
       match key
       | "typeCondition" => n.typeCondition
-      | "directives" => n.directives
+      | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
-      | None => [ "typeCondition", "directives", "selectionSet" ]
       end
-    | let n: FragmentDefinitionNode =>
+    | let n: FragmentDefinitionNode box =>
       match key
       | "name" => n.name
       | "typeCondition" => n.typeCondition
-      | "directives" => n.directives
+      | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
-      | None => [ "name", "typeCondition", "directives", "selectionSet" ]
       end
 
-    | let n: IntValueNode => Array[String]
-    | let n: FloatValueNode => Array[String]
-    | let n: StringValueNode => Array[String]
-    | let n: BooleanValueNode => Array[String]
-    | let n: NullValueNode => Array[String]
-    | let n: EnumValueNode => Array[String]
-    | let n: ListValueNode =>
+    | let n: IntValueNode box => None
+    | let n: FloatValueNode box => None
+    | let n: StringValueNode box => None
+    | let n: BooleanValueNode box => None
+    | let n: NullValueNode box => None
+    | let n: EnumValueNode box => None
+    | let n: ListValueNode box =>
       match key
-      | "values" => n.values
-      | None => [ "values" ]
+      | "values" => n.valueNodes()
       end
-    | let n: ObjectValueNode =>
+    | let n: ObjectValueNode box =>
       match key
-      | "fields" => n.fields
-      | None => [ "fields" ]
+      | "fields" => n.fieldNodes()
       end
-    | let n: ObjectFieldNode =>
+    | let n: ObjectFieldNode box =>
       match key
       | "name" => n.name
       | "value" => n.value
-      | None => [ "name", "value" ]
       end
 
-    | let n: DirectiveNode =>
+    | let n: DirectiveNode box =>
       match key
       | "name" => n.name
-      | "arguments" => n.arguments
-      | None => [ "name", "arguments" ]
+      | "arguments" => n.argumentNodes()
       end
 
-    | let n: NamedTypeNode =>
+    | let n: NamedTypeNode box =>
       match key
       | "name" => n.name
-      | None => [ "name" ]
       end
-    | let n: ListTypeNode =>
+    | let n: ListTypeNode box =>
       match key
       | "type" => n.typeNode
-      | None => [ "type" ]
       end
-    | let n: NonNullTypeNode =>
+    | let n: NonNullTypeNode box =>
       match key
       | "type" => n.typeNode
-      | None => [ "type" ]
       end
 
-    | let n: SchemaDefinitionNode =>
+    | let n: SchemaDefinitionNode box =>
       match key
-      | "directives" => n.directives
-      | "operationTypes" => n.operationTypes
-      | None => [ "directives", "operationTypes" ]
+      | "directives" => n.directiveNodes()
+      | "operationTypes" => n.operationTypeNodes()
       end
-    | let n: OperationTypeDefinitionNode =>
+    | let n: OperationTypeDefinitionNode box =>
       match key
       | "type" => n.typeNode
-      | None => [ "type" ]
       end
 
-    | let n: ScalarTypeDefinitionNode =>
+    | let n: ScalarTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | None => [ "name", "directives" ]
+      | "directives" => n.directiveNodes()
       end
-    | let n: ObjectTypeDefinitionNode =>
+    | let n: ObjectTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "interfaces" => n.interfaces
-      | "directives" => n.directives
-      | "fields" => n.fields
-      | None => [ "name", "interfaces", "directives", "fields" ]
+      | "interfaces" => n.interfaceNodes()
+      | "directives" => n.directiveNodes()
+      | "fields" => n.fieldNodes()
       end
-    | let n: FieldDefinitionNode =>
+    | let n: FieldDefinitionNode box =>
       match key
       | "name" => n.name
-      | "arguments" => n.arguments
+      | "arguments" => n.argumentNodes()
       | "type" => n.typeNode
-      | "directives" => n.directives
-      | None => [ "name", "arguments", "type", "directives" ]
+      | "directives" => n.directiveNodes()
       end
-    | let n: InputValueDefinitionNode =>
+    | let n: InputValueDefinitionNode box =>
       match key
       | "name" => n.name
       | "type" => n.typeNode
       | "defaultValue" => n.defaultValue
-      | "directives" => n.directives
-      | None => [ "name", "type", "defaultValue", "directives" ]
+      | "directives" => n.directiveNodes()
       end
-    | let n: InterfaceTypeDefinitionNode =>
+    | let n: InterfaceTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | "fields" => n.fields
-      | None => [ "name", "directives", "fields" ]
+      | "directives" => n.directiveNodes()
+      | "fields" => n.fieldNodes()
       end
-    | let n: UnionTypeDefinitionNode =>
+    | let n: UnionTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | "types" => n.types
-      | None => [ "name", "directives", "types" ]
+      | "directives" => n.directiveNodes()
+      | "types" => n.typeNodes()
       end
-    | let n: EnumTypeDefinitionNode =>
+    | let n: EnumTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | "values" => n.values
-      | None => [ "name", "directives", "values" ]
+      | "directives" => n.directiveNodes()
+      | "values" => n.valueNodes()
       end
-    | let n: EnumValueDefinitionNode =>
+    | let n: EnumValueDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | None => [ "name", "directives" ]
+      | "directives" => n.directiveNodes()
       end
-    | let n: InputObjectTypeDefinitionNode =>
+    | let n: InputObjectTypeDefinitionNode box =>
       match key
       | "name" => n.name
-      | "directives" => n.directives
-      | "fields" => n.fields
-      | None => [ "name", "directives", "fields" ]
+      | "directives" => n.directiveNodes()
+      | "fields" => n.fieldNodes()
       end
 
-    | let n: TypeExtensionDefinitionNode =>
+    | let n: TypeExtensionDefinitionNode box =>
       match key
       | "definition" => n.definition
-      | None => [ "definition" ]
       end
 
-    | let n: DirectiveDefinitionNode =>
+    | let n: DirectiveDefinitionNode box =>
       match key
       | "name" => n.name
-      | "arguments" => n.arguments
-      | "locations" => n.locations
-      | None => [ "name", "arguments", "locations" ]
+      | "arguments" => n.argumentNodes()
+      | "locations" => n.locationNodes()
       end
     end
 
-  fun ref tt()=>
-    None
-
-/*
-  fun ref visit(root: ASTNode, visitor: Visitor): ASTNode =>
+  fun ref visit(root: ASTNode, visitor: Visitor): ASTNode ? =>
     """
     visit() will walk through an AST using a depth first traversal, calling
     the visitor's enter function at each node in the traversal, and calling the
@@ -294,29 +333,99 @@ class Visit
         });
 
     """
-    let stack: (VisitStack|None) = None
-    let inArray = match root else false end
-    let keys: Array[ASTNode] = [ root ]
-    let index = -1
-    var edits = Array[(U32, ASTNode)] = Array[(U32, ASTNode)]
-    var parent: (ASTNode|None) = None
-    let path = []
-    let ancestors = []
+    var stack: (VisitStack|None) = None
+    var inArray = false // match root else false end
+    var keys: Array[String] = [ "root" ]
+    var index: USize = -1
+    var edits = Array[(U32, (ASTNode|None))]
+    var parent: (ASTNode box|Array[ASTNode box]|None) = None
+    let path = Array[String]
+    let ancestors = Array[ASTNode box]
     var newRoot = root
 
     repeat
       index = index + 1
-      let isLeaving = index == keys.size()
-      var key: (U32|None)
-      var node: ASTNode
-      let isEditing = isLeaving and edits.size() != 0
+      let isLeaving: Bool = index == keys.size()
+      var key: (String|None) = None
+      var node: (ASTNode box|Array[ASTNode box]|None) = None
+      let isEdited: Bool = isLeaving and (edits.size() != 0)
       if isLeaving then
-        key = if ancestors.size() == 0 then None else path.pop()
+        key = if ancestors.size() == 0 then None else path.pop() end
         node = parent
         parent = ancestors.pop()
+        if isEdited then
+          match node
+          | let node': Array[ASTNode box] =>
+            // node = node'.slice()
+            node
+          | let node': ASTNode box =>
+            // TODO
+            // node = node.clone()
+            node
+          end
+          var editOffset: U32 = 0
+          for ii in Range(0, edits.size()) do
+            var editKey: U32 = edits(ii)._1
+            let editValue = edits(ii)._2
+            if inArray then
+              editKey = editKey - editOffset
+            end
+            match (node, editValue)
+            | (let node': Array[ASTNode box], None) =>
+              // TODO
+              // node'.splice(editKey, 1)
+              editOffset = editOffset + 1
+            | (let node': Array[ASTNode box], _) =>
+              // TODO
+              // node'(editKey) = editValue
+              node
+            end
+          end
+        end
+        match stack
+        | let stack': VisitStack =>
+          index = stack'.index
+          keys = stack'.keys
+          edits = stack'.edits
+          inArray = stack'.inArray
+          stack = stack'.prev
+        end
       else
-
+        key = match (parent, inArray)
+        | (None, _) => None
+        | (_, not inArray) => keys(index)
+        end
+        node = match (parent, key)
+        | (let parent': ASTNode box, let key': String) =>
+          query_document_key(parent', key')
+        | (let parent': Array[ASTNode box], _) =>
+          parent'(index)
+        else
+          newRoot
+        end
+        if node is None then
+          continue
+        end
+        match key
+        | let key': String => path.push(key')
+        end
       end
-    until true end
-    root
-*/
+
+      // match node
+      // | ASTNode =>
+      //   None
+      // | Array[ASTNode box] =>
+      //   None
+      // | None =>
+      //   error
+      // end
+    until stack is None end
+
+    if edits.size() != 0 then
+      match edits(edits.size() - 1)._2
+      | let e': ASTNode => newRoot = e'
+      else
+        error
+      end
+    end
+    newRoot
