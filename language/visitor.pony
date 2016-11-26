@@ -9,28 +9,30 @@ type VisitorResponse is (BREAK|SKIP|ASTNode|DELETE|None)
 interface Visitor
   fun detailed_enter(
     node: ASTNode,
-    key: String,
-    parent: ASTNode,
+    key: (String|None),
+    parent: (ASTNode|Array[ASTNode]|None),
     path: Array[String],
-    ancestors: Array[ASTNode box]
-  ) =>
+    ancestors: Array[(ASTNode|Array[ASTNode]|None)]
+  ): VisitorResponse =>
     enter(node)
   fun enter(node: ASTNode): VisitorResponse
   fun leave(node: ASTNode): VisitorResponse
+
+type EditEntry is ((USize|String|None), ASTNode|Array[ASTNode]|None|DELETE)
 
 class VisitStack
   let inArray: Bool
   let index: USize
   let keys: Array[String]
-  let edits: Array[(U32, ASTNode|None)]
-  let prev: VisitStack
+  let edits: Array[EditEntry]
+  let prev: (VisitStack|None)
 
   new create(
     inArray': Bool,
     index': USize,
     keys': Array[String],
-    edits': Array[(U32, ASTNode|None)],
-    prev': VisitStack
+    edits': Array[EditEntry],
+    prev': (VisitStack|None)
   ) =>
     inArray = inArray'
     index = index'
@@ -120,35 +122,35 @@ class Visit
     end
 
   fun ref query_document_key(
-    node: ASTNode box, key: String
-  ): (ASTNode box|Array[ASTNode box]|None) =>
+    node: ASTNode, key: String
+  ): (ASTNode|Array[ASTNode]|None) =>
     match node
-    | let n: DocumentNode box =>
+    | let n: DocumentNode =>
       match key
       | "definitions" => n.definitionNodes()
       end
-    | let n: OperationDefinitionNode box =>
+    | let n: OperationDefinitionNode =>
       match key
       | "name" => n.name
       | "variableDefinitions" => n.variableDefinitionNodes()
       | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
       end
-    | let n: VariableDefinitionNode box =>
+    | let n: VariableDefinitionNode =>
       match key
       | "variable" => n.variable
       | "type" => n.typeNode
       | "defaultValue" => n.defaultValue
       end
-    | let n: VariableNode box =>
+    | let n: VariableNode =>
       match key
       | "name" => n.name
       end
-    | let n: SelectionSetNode box =>
+    | let n: SelectionSetNode =>
       match key
       | "selections" => n.selectionNodes()
       end
-    | let n: FieldNode box =>
+    | let n: FieldNode =>
       match key
       | "alias" => n.alias
       | "name" => n.name
@@ -156,24 +158,24 @@ class Visit
       | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
       end
-    | let n: ArgumentNode box =>
+    | let n: ArgumentNode =>
       match key
       | "name" => n.name
       | "value" => n.value
       end
 
-    | let n: FragmentSpreadNode box =>
+    | let n: FragmentSpreadNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       end
-    | let n: InlineFragmentNode box =>
+    | let n: InlineFragmentNode =>
       match key
       | "typeCondition" => n.typeCondition
       | "directives" => n.directiveNodes()
       | "selectionSet" => n.selectionSet
       end
-    | let n: FragmentDefinitionNode box =>
+    | let n: FragmentDefinitionNode =>
       match key
       | "name" => n.name
       | "typeCondition" => n.typeCondition
@@ -181,117 +183,117 @@ class Visit
       | "selectionSet" => n.selectionSet
       end
 
-    | let n: IntValueNode box => None
-    | let n: FloatValueNode box => None
-    | let n: StringValueNode box => None
-    | let n: BooleanValueNode box => None
-    | let n: NullValueNode box => None
-    | let n: EnumValueNode box => None
-    | let n: ListValueNode box =>
+    | let n: IntValueNode => None
+    | let n: FloatValueNode => None
+    | let n: StringValueNode => None
+    | let n: BooleanValueNode => None
+    | let n: NullValueNode => None
+    | let n: EnumValueNode => None
+    | let n: ListValueNode =>
       match key
       | "values" => n.valueNodes()
       end
-    | let n: ObjectValueNode box =>
+    | let n: ObjectValueNode =>
       match key
       | "fields" => n.fieldNodes()
       end
-    | let n: ObjectFieldNode box =>
+    | let n: ObjectFieldNode =>
       match key
       | "name" => n.name
       | "value" => n.value
       end
 
-    | let n: DirectiveNode box =>
+    | let n: DirectiveNode =>
       match key
       | "name" => n.name
       | "arguments" => n.argumentNodes()
       end
 
-    | let n: NamedTypeNode box =>
+    | let n: NamedTypeNode =>
       match key
       | "name" => n.name
       end
-    | let n: ListTypeNode box =>
+    | let n: ListTypeNode =>
       match key
       | "type" => n.typeNode
       end
-    | let n: NonNullTypeNode box =>
+    | let n: NonNullTypeNode =>
       match key
       | "type" => n.typeNode
       end
 
-    | let n: SchemaDefinitionNode box =>
+    | let n: SchemaDefinitionNode =>
       match key
       | "directives" => n.directiveNodes()
       | "operationTypes" => n.operationTypeNodes()
       end
-    | let n: OperationTypeDefinitionNode box =>
+    | let n: OperationTypeDefinitionNode =>
       match key
       | "type" => n.typeNode
       end
 
-    | let n: ScalarTypeDefinitionNode box =>
+    | let n: ScalarTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       end
-    | let n: ObjectTypeDefinitionNode box =>
+    | let n: ObjectTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "interfaces" => n.interfaceNodes()
       | "directives" => n.directiveNodes()
       | "fields" => n.fieldNodes()
       end
-    | let n: FieldDefinitionNode box =>
+    | let n: FieldDefinitionNode =>
       match key
       | "name" => n.name
       | "arguments" => n.argumentNodes()
       | "type" => n.typeNode
       | "directives" => n.directiveNodes()
       end
-    | let n: InputValueDefinitionNode box =>
+    | let n: InputValueDefinitionNode =>
       match key
       | "name" => n.name
       | "type" => n.typeNode
       | "defaultValue" => n.defaultValue
       | "directives" => n.directiveNodes()
       end
-    | let n: InterfaceTypeDefinitionNode box =>
+    | let n: InterfaceTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       | "fields" => n.fieldNodes()
       end
-    | let n: UnionTypeDefinitionNode box =>
+    | let n: UnionTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       | "types" => n.typeNodes()
       end
-    | let n: EnumTypeDefinitionNode box =>
+    | let n: EnumTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       | "values" => n.valueNodes()
       end
-    | let n: EnumValueDefinitionNode box =>
+    | let n: EnumValueDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       end
-    | let n: InputObjectTypeDefinitionNode box =>
+    | let n: InputObjectTypeDefinitionNode =>
       match key
       | "name" => n.name
       | "directives" => n.directiveNodes()
       | "fields" => n.fieldNodes()
       end
 
-    | let n: TypeExtensionDefinitionNode box =>
+    | let n: TypeExtensionDefinitionNode =>
       match key
       | "definition" => n.definition
       end
 
-    | let n: DirectiveDefinitionNode box =>
+    | let n: DirectiveDefinitionNode =>
       match key
       | "name" => n.name
       | "arguments" => n.argumentNodes()
@@ -337,17 +339,17 @@ class Visit
     var inArray = false // match root else false end
     var keys: Array[String] = [ "root" ]
     var index: USize = -1
-    var edits = Array[(U32, (ASTNode|None))]
-    var parent: (ASTNode box|Array[ASTNode box]|None) = None
+    var edits = Array[EditEntry]
+    var parent: (ASTNode|Array[ASTNode]|None) = None
     let path = Array[String]
-    let ancestors = Array[ASTNode box]
+    let ancestors = Array[(ASTNode|Array[ASTNode]|None)]
     var newRoot = root
 
     repeat
       index = index + 1
       let isLeaving: Bool = index == keys.size()
       var key: (String|None) = None
-      var node: (ASTNode box|Array[ASTNode box]|None) = None
+      var node: (ASTNode|Array[ASTNode]|None) = None
       let isEdited: Bool = isLeaving and (edits.size() != 0)
       if isLeaving then
         key = if ancestors.size() == 0 then None else path.pop() end
@@ -355,30 +357,36 @@ class Visit
         parent = ancestors.pop()
         if isEdited then
           match node
-          | let node': Array[ASTNode box] =>
+          | let node': Array[ASTNode] =>
             // node = node'.slice()
             node
-          | let node': ASTNode box =>
+          | let node': ASTNode =>
             // TODO
             // node = node.clone()
             node
           end
-          var editOffset: U32 = 0
+          var editOffset: USize = 0
           for ii in Range(0, edits.size()) do
-            var editKey: U32 = edits(ii)._1
+            var editKey: (USize|String|None) = edits(ii)._1
             let editValue = edits(ii)._2
-            if inArray then
-              editKey = editKey - editOffset
+            match editKey
+            | let editKey': USize =>
+              editKey = editKey' - editOffset
             end
-            match (node, editValue)
-            | (let node': Array[ASTNode box], None) =>
-              // TODO
-              // node'.splice(editKey, 1)
+            match (node, editKey, editValue)
+            | (let node': Array[ASTNode], let editKey': USize, DELETE) =>
+              // node'.splice(editKey', 1)
               editOffset = editOffset + 1
-            | (let node': Array[ASTNode box], _) =>
+            | (let node': Array[ASTNode], let editKey': USize, let value': ASTNode) =>
+              // node'(editKey') = value'
               // TODO
-              // node'(editKey) = editValue
-              node
+              None
+            | (let node': ASTNode, let editKey': String, let value': ASTNode) =>
+              // node'(editKey') = value'
+              // TODO
+              None
+            else
+              error
             end
           end
         end
@@ -396,10 +404,11 @@ class Visit
         | (_, not inArray) => keys(index)
         end
         node = match (parent, key)
-        | (let parent': ASTNode box, let key': String) =>
+        | (let parent': ASTNode, let key': String) =>
           query_document_key(parent', key')
-        | (let parent': Array[ASTNode box], _) =>
+        | (let parent': Array[ASTNode], _) =>
           parent'(index)
+          None
         else
           newRoot
         end
@@ -407,18 +416,62 @@ class Visit
           continue
         end
         match key
-        | let key': String => path.push(key')
+        | let key': String =>
+          path.push(key')
+        end
+
+        match node
+        | let node': ASTNode =>
+          let result = visitor.detailed_enter(node', key, parent, path, ancestors)
+          match result
+          | BREAK =>
+            break
+          | SKIP =>
+            if not isLeaving then
+              path.pop()
+              continue
+            end
+          | DELETE =>
+            edits.push((key, DELETE))
+            if not isLeaving then
+              path.pop()
+              continue
+            end
+          | let value': ASTNode =>
+            edits.push((key, value'))
+            if not isLeaving then
+              node = value'
+            end
+          | None =>
+            if isEdited then
+              edits.push((key, node))
+            end
+          end
         end
       end
 
-      // match node
-      // | ASTNode =>
-      //   None
-      // | Array[ASTNode box] =>
-      //   None
-      // | None =>
-      //   error
-      // end
+      if not isLeaving then
+        stack = VisitStack(inArray, index, keys, edits, stack)
+        inArray = match node
+        | let node': Array[ASTNode] =>
+          true
+        else
+          false
+        end
+        keys = match node
+        | let node': ASTNode => query_document_keys(node')
+        | let node': Array[ASTNode] => keys
+        else Array[String] end
+
+        index = -1
+        edits = Array[EditEntry]
+        match parent
+        | None => None
+        else
+          ancestors.push(parent)
+        end
+        parent = node
+      end
     until stack is None end
 
     if edits.size() != 0 then

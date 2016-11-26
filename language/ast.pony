@@ -62,25 +62,25 @@ class ArraysHelper
       "None".clone()
     end
   fun directive_nodes(
-    directives: (Array[DirectiveNode] box|None)
-  ): (Array[ASTNode box]|None) =>
+    directives: (Array[DirectiveNode]|None)
+  ): (Array[ASTNode]|None) =>
     match directives
-    | let a': Array[DirectiveNode] box =>
-      Array[ASTNode box].append(a')
+    | let a': Array[DirectiveNode] =>
+      Array[ASTNode].concat(a'.values())
     end
   fun argument_nodes(
-    arguments: (Array[ArgumentNode] box|None)
-  ): (Array[ASTNode box]|None) =>
+    arguments: (Array[ArgumentNode]|None)
+  ): (Array[ASTNode]|None) =>
     match arguments
-    | let a': Array[ArgumentNode] box =>
-      Array[ASTNode box].append(a')
+    | let a': Array[ArgumentNode] =>
+      Array[ASTNode].concat(a'.values())
     end
   fun named_type_nodes(
-    a: (Array[NamedTypeNode] box|None)
-  ): (Array[ASTNode box]|None) =>
+    a: (Array[NamedTypeNode]|None)
+  ): (Array[ASTNode]|None) =>
     match a
-    | let a': Array[NamedTypeNode] box =>
-      Array[ASTNode box].append(a')
+    | let a': Array[NamedTypeNode] =>
+      Array[ASTNode].concat(a'.values())
     end
 
 class val Token
@@ -236,11 +236,23 @@ class DocumentNode is (Equatable[DocumentNode] & Stringable)
   let kind : String = "Document"
   let loc: (Location|None)
   let definitions: Array[DefinitionNode]
-  new create(loc' : Location, definitions': Array[DefinitionNode]) =>
+  new create(loc': Location, definitions': Array[DefinitionNode]) =>
     loc = loc'
     definitions = definitions'
-  fun definitionNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(definitions)
+  fun ref definitionNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(definitions.values())
+  // fun ref apply(key: String): Array[ASTNode] ? =>
+  //   match key
+  //   | "definitions" =>
+  //     Array[ASTNode].concat(definitions.values())
+  //   else
+  //     error
+  //   end
+  // fun ref update(key: String, value: Array[ASTNode]) =>
+  //   match key
+  //   | "definitions" =>
+  //     definitions.clear().concat(value.values())
+  //   end
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
     s.append(" loc:").append(loc.string()).append("\n")
@@ -277,12 +289,12 @@ class OperationDefinitionNode
     variableDefinitions = variableDefinitions'
     directives = directives'
     selectionSet = selectionSet'
-  fun variableDefinitionNodes(): (Array[ASTNode box]|None) =>
+  fun ref variableDefinitionNodes(): (Array[ASTNode]|None) =>
     match variableDefinitions
-    | let a': Array[VariableDefinitionNode] box =>
-      Array[ASTNode box].append(a')
+    | let a': Array[VariableDefinitionNode] =>
+      Array[ASTNode].concat(a'.values())
     end
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
@@ -338,8 +350,8 @@ class SelectionSetNode is Stringable
   new create(loc': Location, selections': Array[SelectionNode]) =>
     loc = loc'
     selections = selections'
-  fun selectionNodes(): Array[ASTNode box] =>
-      Array[ASTNode box].append(selections)
+  fun ref selectionNodes(): Array[ASTNode] =>
+      Array[ASTNode].concat(selections.values())
   fun string(): String iso^ =>
     let s = String().append(kind).append(loc.string()).append("[\n")
     for n in selections.values() do
@@ -377,9 +389,9 @@ class FieldNode
     arguments = arguments'
     directives = directives'
     selectionSet = selectionSet'
-  fun argumentNodes(): (Array[ASTNode box]|None) =>
+  fun ref argumentNodes(): (Array[ASTNode]|None) =>
     atos.argument_nodes(arguments)
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     let s = String()
@@ -425,7 +437,7 @@ class FragmentSpreadNode
     loc = loc'
     name = name'
     directives = directives'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -447,7 +459,7 @@ class InlineFragmentNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -472,7 +484,7 @@ class FragmentDefinitionNode
     typeCondition = typeCondition'
     directives = directives'
     selectionSet = selectionSet'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -584,8 +596,8 @@ class ListValueNode is (Equatable[ValueNode] & Stringable)
   new create(loc': Location, values': Array[ValueNode]) =>
     loc = loc'
     values = values'
-  fun valueNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(values)
+  fun ref valueNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(values.values())
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
@@ -600,8 +612,8 @@ class ObjectValueNode is (Equatable[ValueNode] & Stringable)
   new create(loc': Location, fields': Array[ObjectFieldNode]) =>
     loc = loc'
     fields = fields'
-  fun fieldNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(fields)
+  fun ref fieldNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(fields.values())
   fun string(): String iso^ =>
     String()
       .append(kind).append("{")
@@ -632,7 +644,7 @@ class DirectiveNode
     loc = loc'
     name = name'
     arguments = arguments'
-  fun argumentNodes(): (Array[ASTNode box]|None) =>
+  fun ref argumentNodes(): (Array[ASTNode]|None) =>
     atos.argument_nodes(arguments)
   fun string(): String iso^ =>
     kind.clone()
@@ -695,10 +707,10 @@ class SchemaDefinitionNode
     loc = loc'
     directives = directives'
     operationTypes = operationTypes'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun operationTypeNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(operationTypes)
+  fun ref operationTypeNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(operationTypes.values())
   fun string(): String iso^ =>
     kind.clone()
 
@@ -737,7 +749,7 @@ class ScalarTypeDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -762,12 +774,12 @@ class ObjectTypeDefinitionNode
     interfaces = interfaces'
     directives = directives'
     fields = fields'
-  fun interfaceNodes(): (Array[ASTNode box]|None) =>
+  fun ref interfaceNodes(): (Array[ASTNode]|None) =>
     atos.named_type_nodes(interfaces)
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun fieldNodes(): (Array[ASTNode box]) =>
-    Array[ASTNode box].append(fields)
+  fun ref fieldNodes(): (Array[ASTNode]) =>
+    Array[ASTNode].concat(fields.values())
   fun string(): String iso^ =>
     kind.clone()
 
@@ -791,9 +803,9 @@ class FieldDefinitionNode
     arguments = arguments'
     typeNode = typeNode'
     directives = directives'
-  fun argumentNodes(): (Array[ASTNode box]|None) =>
-    Array[ASTNode box].append(arguments)
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref argumentNodes(): (Array[ASTNode]|None) =>
+    Array[ASTNode].concat(arguments.values())
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -818,7 +830,7 @@ class InputValueDefinitionNode
     typeNode = typeNode'
     defaultValue = defaultValue'
     directives = directives'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -840,10 +852,10 @@ class InterfaceTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun fieldNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(fields)
+  fun ref fieldNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(fields.values())
   fun string(): String iso^ =>
     kind.clone()
 
@@ -864,9 +876,9 @@ class UnionTypeDefinitionNode
     name = name'
     directives = directives'
     types = types'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun typeNodes(): (Array[ASTNode box]|None) =>
+  fun ref typeNodes(): (Array[ASTNode]|None) =>
     atos.named_type_nodes(types)
   fun string(): String iso^ =>
     kind.clone()
@@ -888,10 +900,10 @@ class EnumTypeDefinitionNode
     name = name'
     directives = directives'
     values = values'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun valueNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(values)
+  fun ref valueNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(values.values())
   fun string(): String iso^ =>
     kind.clone()
 
@@ -909,7 +921,7 @@ class EnumValueDefinitionNode
     loc = loc'
     name = name'
     directives = directives'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
   fun string(): String iso^ =>
     kind.clone()
@@ -931,10 +943,10 @@ class InputObjectTypeDefinitionNode
     name = name'
     directives = directives'
     fields = fields'
-  fun directiveNodes(): (Array[ASTNode box]|None) =>
+  fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
-  fun fieldNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(fields)
+  fun ref fieldNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(fields.values())
   fun string(): String iso^ =>
     kind.clone()
 
@@ -967,12 +979,12 @@ class DirectiveDefinitionNode
     name = name'
     arguments = arguments'
     locations = locations'
-  fun argumentNodes(): (Array[ASTNode box]|None) =>
+  fun ref argumentNodes(): (Array[ASTNode]|None) =>
     match arguments
-    | let a': Array[InputValueDefinitionNode] box =>
-      Array[ASTNode box].append(a')
+    | let a': Array[InputValueDefinitionNode] =>
+      Array[ASTNode].concat(a'.values())
     end
-  fun locationNodes(): Array[ASTNode box] =>
-    Array[ASTNode box].append(locations)
+  fun ref locationNodes(): Array[ASTNode] =>
+    Array[ASTNode].concat(locations.values())
   fun string(): String iso^ =>
     kind.clone()
