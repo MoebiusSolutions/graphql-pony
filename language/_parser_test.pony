@@ -205,7 +205,7 @@ class iso _TestParsesMultibyteCharacters is UnitTest
     let f = ops.selectionSet.selections(0) as FieldNode
     let args = f.arguments as Array[ArgumentNode]
     h.assert_eq[USize](1, args.size())
-    let v = args(0).value as StringValueNode
+    let v = args(0).valueNode as StringValueNode
     h.assert_eq[String]("StringValue", v.kind.string())
     // TODO - below fails
     // h.assert_eq[String]("Has a \u0A0A multi-byte character.", v.value)

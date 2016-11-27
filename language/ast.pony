@@ -219,14 +219,16 @@ type ASTNode is
 class NameNode
   let kind : String = "Name"
   let loc: (Location|None)
-  let value: String
-  new create(loc': Location, value' : String) =>
+  let valueString: String
+  new create(loc': Location, value': String) =>
     loc = loc'
-    value = value'
+    valueString = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append("\"").append(value)
+      .append("value:").append("\"").append(valueString)
       .append("}")
     s.clone()
 
@@ -248,11 +250,8 @@ class DocumentNode is (Equatable[DocumentNode] & Stringable)
   //   else
   //     error
   //   end
-  // fun ref update(key: String, value: Array[ASTNode]) =>
-  //   match key
-  //   | "definitions" =>
-  //     definitions.clear().concat(value.values())
-  //   end
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
     s.append(" loc:").append(loc.string()).append("\n")
@@ -296,6 +295,8 @@ class OperationDefinitionNode
     end
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n")
       .append("loc:").append(loc.string()).append("\n")
@@ -330,6 +331,8 @@ class VariableDefinitionNode
     variable = variable'
     typeNode = typeNode'
     defaultValue = defaultValue'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -340,6 +343,8 @@ class VariableNode is (Equatable[ValueNode] & Stringable)
   new create(loc': Location, name': NameNode) =>
     loc = loc'
     name = name'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -352,6 +357,8 @@ class SelectionSetNode is Stringable
     selections = selections'
   fun ref selectionNodes(): Array[ASTNode] =>
       Array[ASTNode].concat(selections.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String().append(kind).append(loc.string()).append("[\n")
     for n in selections.values() do
@@ -393,6 +400,8 @@ class FieldNode
     atos.argument_nodes(arguments)
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String()
     s.append(kind).append("{")
@@ -409,16 +418,18 @@ class ArgumentNode is Stringable
   let kind: String = "Argument"
   let loc: (Location|None)
   let name: NameNode
-  let value: ValueNode
+  let valueNode: ValueNode
   new create(loc': Location, name': NameNode, value': ValueNode) =>
     loc = loc'
     name = name'
-    value = value'
+    valueNode = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     let s = String().append(kind).append("{\n    ")
       .append("loc:").append(loc.string()).append(",")
       .append("name:").append(name.string()).append(",")
-      .append("value:").append(value.string())
+      .append("value:").append(valueNode.string())
       .append("}")
     s.clone()
 
@@ -439,6 +450,8 @@ class FragmentSpreadNode
     directives = directives'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -461,6 +474,8 @@ class InlineFragmentNode
     selectionSet = selectionSet'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -486,6 +501,8 @@ class FragmentDefinitionNode
     selectionSet = selectionSet'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -505,53 +522,61 @@ type ValueNode is
 class IntValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "IntValue"
   let loc: (Location|None)
-  let value: String
+  let valueString: String
   new create(loc': Location, value': String) =>
     loc = loc'
-    value = value'
+    valueString = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append(value)
+      .append("value:").append(valueString)
       .append("}").clone()
 
 class FloatValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "FloatValue"
   let loc: (Location|None)
-  let value: String
+  let valueString: String
   new create(loc': Location, value': String) =>
     loc = loc'
-    value = value'
+    valueString = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append(value)
+      .append("value:").append(valueString)
       .append("}").clone()
 
 class StringValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "StringValue"
   let loc: (Location|None)
-  let value: String
+  let valueString: String
   new create(loc': Location, value': String) =>
     loc = loc'
-    value = value'
+    valueString = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append(value)
+      .append("value:").append(valueString)
       .append("}").clone()
 
 class BooleanValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "BooleanValue"
   let loc: (Location|None)
-  let value: Bool
+  let valueBool: Bool
   new create(loc': Location, value': Bool) =>
     loc = loc'
-    value = value'
+    valueBool = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append(value.string())
+      .append("value:").append(valueBool.string())
       .append("}").clone()
 
 class NullValueNode is (Equatable[ValueNode] & Stringable)
@@ -559,6 +584,8 @@ class NullValueNode is (Equatable[ValueNode] & Stringable)
   let loc: (Location|None)
   new create(loc': Location) =>
     loc = loc'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{").append(loc.string()).append("}").clone()
   fun eq(that': box->ValueNode): Bool =>
@@ -578,14 +605,16 @@ class NullValueNode is (Equatable[ValueNode] & Stringable)
 class EnumValueNode is (Equatable[ValueNode] & Stringable)
   let kind: String = "EnumValue"
   let loc: (Location|None)
-  let value: String
+  let valueString: String
   new create(loc': Location, value': String) =>
     loc = loc'
-    value = value'
+    valueString = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
-      .append("value:").append(value)
+      .append("value:").append(valueString)
       .append("}").clone()
 
 class ListValueNode is (Equatable[ValueNode] & Stringable)
@@ -598,6 +627,8 @@ class ListValueNode is (Equatable[ValueNode] & Stringable)
     values = values'
   fun ref valueNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(values.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String().append(kind).append("{")
       .append("loc:").append(loc.string()).append(",")
@@ -614,6 +645,8 @@ class ObjectValueNode is (Equatable[ValueNode] & Stringable)
     fields = fields'
   fun ref fieldNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(fields.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     String()
       .append(kind).append("{")
@@ -625,11 +658,13 @@ class ObjectFieldNode
   let kind: String = "ObjectField"
   let loc: (Location|None)
   let name: NameNode
-  let value: ValueNode
+  let valueNode: ValueNode
   new create(loc': Location, name': NameNode, value': ValueNode) =>
     loc = loc'
     name = name'
-    value = value'
+    valueNode = value'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -646,6 +681,8 @@ class DirectiveNode
     arguments = arguments'
   fun ref argumentNodes(): (Array[ASTNode]|None) =>
     atos.argument_nodes(arguments)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -663,6 +700,8 @@ class NamedTypeNode
   new create(loc': Location, name': NameNode) =>
     loc = loc'
     name = name'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -673,6 +712,8 @@ class ListTypeNode
   new create(loc': Location, typeNode': TypeNode) =>
     loc = loc'
     typeNode = typeNode'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -683,6 +724,8 @@ class NonNullTypeNode
   new create(loc': Location, typeNode': (NamedTypeNode | ListTypeNode)) =>
     loc = loc'
     typeNode = typeNode'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -711,6 +754,8 @@ class SchemaDefinitionNode
     atos.directive_nodes(directives)
   fun ref operationTypeNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(operationTypes.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -727,6 +772,8 @@ class OperationTypeDefinitionNode
     loc = loc'
     operation = operation'
     typeNode = typeNode'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -751,6 +798,8 @@ class ScalarTypeDefinitionNode
     directives = directives'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -780,6 +829,8 @@ class ObjectTypeDefinitionNode
     atos.directive_nodes(directives)
   fun ref fieldNodes(): (Array[ASTNode]) =>
     Array[ASTNode].concat(fields.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -807,6 +858,8 @@ class FieldDefinitionNode
     Array[ASTNode].concat(arguments.values())
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -832,6 +885,8 @@ class InputValueDefinitionNode
     directives = directives'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -856,6 +911,8 @@ class InterfaceTypeDefinitionNode
     atos.directive_nodes(directives)
   fun ref fieldNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(fields.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -880,6 +937,8 @@ class UnionTypeDefinitionNode
     atos.directive_nodes(directives)
   fun ref typeNodes(): (Array[ASTNode]|None) =>
     atos.named_type_nodes(types)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -904,6 +963,8 @@ class EnumTypeDefinitionNode
     atos.directive_nodes(directives)
   fun ref valueNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(values.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -923,6 +984,8 @@ class EnumValueDefinitionNode
     directives = directives'
   fun ref directiveNodes(): (Array[ASTNode]|None) =>
     atos.directive_nodes(directives)
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -947,6 +1010,8 @@ class InputObjectTypeDefinitionNode
     atos.directive_nodes(directives)
   fun ref fieldNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(fields.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -960,6 +1025,8 @@ class TypeExtensionDefinitionNode
   ) =>
     loc = loc'
     definition = definition'
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()
 
@@ -986,5 +1053,7 @@ class DirectiveDefinitionNode
     end
   fun ref locationNodes(): Array[ASTNode] =>
     Array[ASTNode].concat(locations.values())
+  fun ref update(key: String, value: (ASTNode|Array[ASTNode]|None)) =>
+    None
   fun string(): String iso^ =>
     kind.clone()

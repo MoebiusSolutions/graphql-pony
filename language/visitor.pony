@@ -161,7 +161,7 @@ class Visit
     | let n: ArgumentNode =>
       match key
       | "name" => n.name
-      | "value" => n.value
+      | "value" => n.valueNode
       end
 
     | let n: FragmentSpreadNode =>
@@ -200,7 +200,7 @@ class Visit
     | let n: ObjectFieldNode =>
       match key
       | "name" => n.name
-      | "value" => n.value
+      | "value" => n.valueNode
       end
 
     | let n: DirectiveNode =>
@@ -358,8 +358,7 @@ class Visit
         if isEdited then
           match node
           | let node': Array[ASTNode] =>
-            // node = node'.slice()
-            node
+            node'.clone()
           | let node': ASTNode =>
             // TODO
             // node = node.clone()
@@ -374,17 +373,19 @@ class Visit
               editKey = editKey' - editOffset
             end
             match (node, editKey, editValue)
-            | (let node': Array[ASTNode], let editKey': USize, DELETE) =>
-              // node'.splice(editKey', 1)
+            | (let node': Array[ASTNode],
+               let editKey': USize, DELETE) =>
+              node'.remove(editKey', 1)
               editOffset = editOffset + 1
-            | (let node': Array[ASTNode], let editKey': USize, let value': ASTNode) =>
-              // node'(editKey') = value'
-              // TODO
-              None
-            | (let node': ASTNode, let editKey': String, let value': ASTNode) =>
-              // node'(editKey') = value'
-              // TODO
-              None
+            | (let node': Array[ASTNode],
+               let editKey': USize, let value': ASTNode) =>
+              node'(editKey') = value'
+            | (let node': ASTNode,
+               let editKey': String, let value': ASTNode) =>
+              node'(editKey') = value'
+            | (let node': ASTNode,
+               let editKey': String, let value': Array[ASTNode]) =>
+              node'(editKey') = value'
             else
               error
             end
