@@ -9,7 +9,7 @@ type VisitorResponse is (BREAK|SKIP|ASTNode|DELETE|None)
 interface Visitor
   fun detailed_enter(
     node: ASTNode,
-    key: (String|None),
+    key: (String|USize|None),
     parent: (ASTNode|Array[ASTNode]|None),
     path: Array[String],
     ancestors: Array[(ASTNode|Array[ASTNode]|None)]
@@ -41,6 +41,12 @@ class VisitStack
     prev = prev'
 
 class Visit
+  let env: Env
+  var err: String = ""
+  var loc: SourceLoc = __loc
+
+  new create(env': Env) =>
+    env = env'
   fun ref query_document_keys(node: ASTNode box): Array[String] =>
     match node
     | let n: DocumentNode box =>
@@ -301,7 +307,7 @@ class Visit
       end
     end
 
-  fun ref visit(root: ASTNode, visitor: Visitor): ASTNode ? =>
+  fun ref apply(root: ASTNode, visitor: Visitor box): ASTNode ? =>
     """
     visit() will walk through an AST using a depth first traversal, calling
     the visitor's enter function at each node in the traversal, and calling the
@@ -348,13 +354,15 @@ class Visit
     repeat
       index = index + 1
       let isLeaving: Bool = index == keys.size()
-      var key: (String|None) = None
+      var key: (String|USize|None) = None
       var node: (ASTNode|Array[ASTNode]|None) = None
       let isEdited: Bool = isLeaving and (edits.size() != 0)
       if isLeaving then
-        key = if ancestors.size() == 0 then None else path.pop() end
         node = parent
-        parent = ancestors.pop()
+        key = if ancestors.size() == 0 then None else
+          try path.pop() else loc = __loc; error end
+        end
+        parent = if ancestors.size() == 0 then None else ancestors.pop() end
         if isEdited then
           match node
           | let node': Array[ASTNode] =>
@@ -366,7 +374,9 @@ class Visit
           end
           var editOffset: USize = 0
           for ii in Range(0, edits.size()) do
-            var editKey: (USize|String|None) = edits(ii)._1
+            var editKey: (USize|String|None) = try
+              edits(ii)._1 else loc = __loc; error
+            end
             let editValue = edits(ii)._2
             match editKey
             | let editKey': USize =>
@@ -379,7 +389,7 @@ class Visit
               editOffset = editOffset + 1
             | (let node': Array[ASTNode],
                let editKey': USize, let value': ASTNode) =>
-              node'(editKey') = value'
+              try node'(editKey') = value' else loc = __loc; error end
             | (let node': ASTNode,
                let editKey': String, let value': ASTNode) =>
               node'(editKey') = value'
@@ -387,6 +397,8 @@ class Visit
                let editKey': String, let value': Array[ASTNode]) =>
               node'(editKey') = value'
             else
+              err = "match (node, editKey, editValue) failed"
+              loc = __loc
               error
             end
           end
@@ -402,13 +414,20 @@ class Visit
       else
         key = match (parent, inArray)
         | (None, _) => None
-        | (_, not inArray) => keys(index)
+        | (_, true) => index
+        | (_, false) => try keys(index) else loc = __loc; error end
         end
+
+        // match parent
+        // | let p: ASTNode => env.out.print("parent:" + p.string())
+        // end
+        // env.out.print("key:"+key.string())
+
         node = match (parent, key)
         | (let parent': ASTNode, let key': String) =>
           query_document_key(parent', key')
         | (let parent': Array[ASTNode], _) =>
-          parent'(index)
+          try parent'(index) else loc = __loc; error end
           None
         else
           newRoot
@@ -420,38 +439,44 @@ class Visit
         | let key': String =>
           path.push(key')
         end
+      end
 
-        match node
-        | let node': ASTNode =>
-          let result = visitor.detailed_enter(node', key, parent, path, ancestors)
-          match result
-          | BREAK =>
-            break
-          | SKIP =>
-            if not isLeaving then
-              path.pop()
-              continue
-            end
-          | DELETE =>
-            edits.push((key, DELETE))
-            if not isLeaving then
-              path.pop()
-              continue
-            end
-          | let value': ASTNode =>
-            edits.push((key, value'))
-            if not isLeaving then
-              node = value'
-            end
-          | None =>
-            if isEdited then
-              edits.push((key, node))
-            end
+      match node
+      | let node': ASTNode =>
+        let result = if isLeaving then
+          visitor.leave(node')
+        else
+          visitor.detailed_enter(node', key, parent, path, ancestors)
+        end
+        match result
+        | BREAK =>
+          break
+        | SKIP =>
+          if not isLeaving then
+            try path.pop() else loc = __loc; error end
+            continue
+          end
+        | DELETE =>
+          edits.push((key, DELETE))
+          if not isLeaving then
+            try path.pop() else loc = __loc; error end
+            continue
+          end
+        | let value': ASTNode =>
+          edits.push((key, value'))
+          if not isLeaving then
+            node = value'
+          end
+        | None =>
+          if isEdited then
+            edits.push((key, node))
           end
         end
       end
 
       if not isLeaving then
+        let atos: ArraysHelper = ArraysHelper
+        env.out.print("stack.push:"+ index.string() + atos.string[String](keys))
         stack = VisitStack(inArray, index, keys, edits, stack)
         inArray = match node
         | let node': Array[ASTNode] =>
@@ -476,9 +501,14 @@ class Visit
     until stack is None end
 
     if edits.size() != 0 then
-      match edits(edits.size() - 1)._2
+      let enode = try
+        edits(edits.size() - 1)._2
+      else loc = __loc; error end
+      match enode
       | let e': ASTNode => newRoot = e'
       else
+        err = "edits(-1)._2 match failed"
+        loc = __loc
         error
       end
     end

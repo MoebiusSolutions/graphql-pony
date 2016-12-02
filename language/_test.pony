@@ -1,4 +1,4 @@
-use "ponytest"
+ use "ponytest"
 
 actor Main is TestList
   new create(env: Env) =>
@@ -8,11 +8,11 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
-    test(_TestLexerAdvance)
-    test(_TestLexer)
-    test(_TestParser)
-
-    _ParserTest.make().tests(test)
+    // test(_TestLexerAdvance)
+    // test(_TestLexer)
+    // test(_TestParser)
+    //
+    // _ParserTest.make().tests(test)
     _VisitorTest.make().tests(test)
 
 class iso _TestLexerAdvance is UnitTest
