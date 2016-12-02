@@ -1,6 +1,7 @@
 class GraphQLParser
   let env: Env
   var err: GraphQLError = GraphQLError("", 0, 0, "Unknown error")
+  var sourceLoc: SourceLoc = __loc
 
   new create(env': Env) =>
     env = env'
@@ -105,10 +106,12 @@ class GraphQLParser
         parse_type_system_definition(lexer)
       else
         unexpected(lexer)
+        sourceLoc = __loc
         error
       end
     else
       unexpected(lexer)
+      sourceLoc = __loc
       error
     end
 
@@ -219,6 +222,7 @@ class GraphQLParser
     | "subscription" => return TnSubscription
     end
     unexpected(lexer, operationToken)
+    sourceLoc = __loc
     error
 
   fun ref parse_name(lexer: GraphQLLexer): NameNode ? =>
@@ -392,6 +396,7 @@ class GraphQLParser
       end
     end
     unexpected(lexer)
+    sourceLoc = __loc
     error
 
   fun ref parse_variable(lexer: GraphQLLexer): VariableNode ? =>
@@ -477,6 +482,7 @@ class GraphQLParser
     """
     if lexer.token().value == "on" then
       unexpected(lexer)
+      sourceLoc = __loc
       error
     end
     parse_name(lexer)
@@ -515,6 +521,7 @@ class GraphQLParser
       end
     end
     unexpected(lexer)
+    sourceLoc = __loc
     error
 
   fun ref parse_schema_definition(lexer: GraphQLLexer): SchemaDefinitionNode ? =>
@@ -817,6 +824,7 @@ class GraphQLParser
       token'.column,
       "Expected "+ kind.string() +", found "+ token'.kind.string()
     )
+    sourceLoc = __loc
     error
 
   fun ref expect_keyword(lexer: GraphQLLexer, value: String): Token ? =>
@@ -835,6 +843,7 @@ class GraphQLParser
         .append(", found ").append(token.kind.string()).append(" ")
         .append("\"").append(token.value).append("\"")
     syntax_error("TODO", token.line, token.column, msg.clone())
+    sourceLoc = __loc
     error
 
   fun ref unexpected(lexer: GraphQLLexer, atToken: (Token|None) = None) =>
