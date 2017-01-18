@@ -14,6 +14,7 @@ actor Main is TestList
     //
     // _ParserTest.make().tests(test)
     _VisitorTest.make().tests(test)
+    _LearningTest.make().tests(test)
 
 class iso _TestLexerAdvance is UnitTest
   fun name(): String => "lexer advance"
